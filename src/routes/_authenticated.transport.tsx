@@ -89,6 +89,17 @@ const CATEGORIES: ("all" | AlbionCategory)[] = [
   "Resource",
 ];
 
+type SellMode = "instasell" | "sellorder";
+
+function useDebounced<T>(value: T, delay = 500): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 function TransportPage() {
   const [baseId, setBaseId] = useState<string>("BAG");
   const [tier, setTier] = useState<number>(4);
@@ -96,6 +107,7 @@ function TransportPage() {
   const [quality, setQuality] = useState<number>(1);
   const [quantity, setQuantity] = useState<number>(100);
   const [premium, setPremium] = useState<boolean>(true);
+  const [sellMode, setSellMode] = useState<SellMode>("instasell");
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,6 +115,8 @@ function TransportPage() {
   const [openItemPicker, setOpenItemPicker] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<"all" | AlbionCategory>("all");
   const [pickerQuery, setPickerQuery] = useState("");
+  // Debounce de 500ms para evitar rate-limiting en filtros y futuras búsquedas a la API.
+  const debouncedQuery = useDebounced(pickerQuery, 500);
 
   const itemId = useMemo(() => buildItemId(baseId, tier, enchant), [baseId, tier, enchant]);
 
@@ -110,37 +124,49 @@ function TransportPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchPrices(itemId, quality)
-      .then((data) => {
-        if (!cancelled) setRows(data);
-      })
-      .catch((e: Error) => !cancelled && setError(e.message))
-      .finally(() => !cancelled && setLoading(false));
+    // Pequeño debounce también antes del fetch: si el usuario cambia tier/enchant
+    // rápidamente, sólo se dispara la última petición tras 350ms.
+    const t = setTimeout(() => {
+      fetchPrices(itemId, quality)
+        .then((data) => {
+          if (!cancelled) setRows(data);
+        })
+        .catch((e: Error) => !cancelled && setError(e.message))
+        .finally(() => !cancelled && setLoading(false));
+    }, 350);
     return () => {
       cancelled = true;
+      clearTimeout(t);
     };
   }, [itemId, quality]);
 
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
-  const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
+  // Instasell  → rellenamos órdenes de COMPRA del BM (buy_price_max).
+  // Sell Order → publicamos a precio competitivo, referencia sell_price_min.
+  const bmInstasellPrice = blackMarket?.buy_price_max ?? 0;
+  const bmSellOrderPrice = blackMarket?.sell_price_min ?? 0;
+  const bmRefPrice = sellMode === "instasell" ? bmInstasellPrice : bmSellOrderPrice;
 
-  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
-  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
-  // existe cuando creas tu propia orden de venta en una ciudad.
-  const totalTaxRate = premium ? 0.04 : 0.08;
+  // Impuestos:
+  //  - Instasell: sólo impuesto de venta (4% premium / 8% sin premium).
+  //  - Sell Order: setup fee 2.5% al publicar + impuesto de venta al vender.
+  const salesTax = premium ? 0.04 : 0.08;
+  const setupFee = sellMode === "sellorder" ? 0.025 : 0;
+  const totalTaxRate = salesTax + setupFee;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
-    if (!buy || !bmBuyPrice) {
+    if (!buy || !bmRefPrice) {
       return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
-    const gross = bmBuyPrice * quantity;
+    const gross = bmRefPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
     return { buy, totalCost, gross, taxes, net, roi };
   };
+
 
   const cityRows = CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
