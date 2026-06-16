@@ -400,11 +400,29 @@ function TransportPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div className="flex items-center gap-2">
-                <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
-                <Label htmlFor="premium" className="cursor-pointer">
-                  Premium activo (impuesto venta 4% vs 8%)
-                </Label>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
+                  <Label htmlFor="premium" className="cursor-pointer">
+                    Premium (4% vs 8%)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Modo de venta BM:</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={sellMode}
+                    onValueChange={(v) => v && setSellMode(v as SellMode)}
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="instasell" className="px-2 text-xs">
+                      Venta directa
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="order" className="px-2 text-xs">
+                      Orden de venta
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               </div>
               <Button
                 variant="ghost"
