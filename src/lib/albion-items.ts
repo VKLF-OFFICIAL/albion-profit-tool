@@ -2,12 +2,38 @@
 // `base` es el ID interno sin Tier ni encantamiento.
 // Para construir el ID final: `T{tier}_{base}` y, si enchant > 0, añadir `@{enchant}`.
 
+export type AlbionCategory =
+  | "Bag"
+  | "Cape"
+  | "Armor"
+  | "Weapon"
+  | "Mount"
+  | "Tool"
+  | "Consumable"
+  | "Resource";
+
+export const CATEGORY_LABEL: Record<AlbionCategory, string> = {
+  Bag: "Bolsas",
+  Cape: "Capas",
+  Armor: "Armaduras",
+  Weapon: "Armas",
+  Mount: "Monturas",
+  Tool: "Herramientas",
+  Consumable: "Consumibles",
+  Resource: "Recursos",
+};
+
 export interface AlbionItemBase {
   base: string;
   name: string;
-  category: "Bag" | "Cape" | "Armor" | "Weapon" | "Mount" | "Tool" | "Consumable" | "Resource";
+  category: AlbionCategory;
   /** Tiers disponibles para este base (la mayoría son T4-T8). */
   tiers?: number[];
+}
+
+/** Imagen del ítem (PNG transparente) desde el render oficial de Albion Online. */
+export function itemImageUrl(itemId: string, quality = 1, size = 96): string {
+  return `https://render.albiononline.com/v1/item/${encodeURIComponent(itemId)}.png?quality=${quality}&size=${size}`;
 }
 
 export const ITEM_BASES: AlbionItemBase[] = [
@@ -68,6 +94,23 @@ export const ITEM_BASES: AlbionItemBase[] = [
   { base: "MEAL_STEW", name: "Estofado", category: "Consumable" },
   { base: "POTION_HEAL", name: "Poción curativa", category: "Consumable" },
   { base: "POTION_ENERGY", name: "Poción de energía", category: "Consumable" },
+  { base: "MEAL_PIE_FISH", name: "Pastel de pescado", category: "Consumable" },
+  { base: "MEAL_SALAD", name: "Ensalada", category: "Consumable" },
+  { base: "POTION_STONESKIN", name: "Poción piel de piedra", category: "Consumable" },
+  { base: "POTION_INVISIBILITY", name: "Poción de invisibilidad", category: "Consumable" },
+
+  // Recursos en bruto
+  { base: "WOOD", name: "Madera", category: "Resource" },
+  { base: "ORE", name: "Mineral", category: "Resource" },
+  { base: "HIDE", name: "Piel", category: "Resource" },
+  { base: "FIBER", name: "Fibra", category: "Resource" },
+  { base: "ROCK", name: "Piedra", category: "Resource" },
+  // Recursos refinados
+  { base: "PLANKS", name: "Tablones", category: "Resource" },
+  { base: "METALBAR", name: "Lingotes", category: "Resource" },
+  { base: "LEATHER", name: "Cuero", category: "Resource" },
+  { base: "CLOTH", name: "Tela", category: "Resource" },
+  { base: "STONEBLOCK", name: "Bloques de piedra", category: "Resource" },
 ];
 
 export const CITIES = [
