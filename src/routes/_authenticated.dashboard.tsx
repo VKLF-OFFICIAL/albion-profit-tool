@@ -58,14 +58,9 @@ const sections: Section[] = [
 ];
 
 function DashboardPage() {
-  const [name, setName] = useState("Aventurero");
+  const { username } = useProfile();
+  const name = username || "Aventurero";
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const email = data.user?.email;
-      if (email) setName(email.split("@")[0]);
-    });
-  }, []);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
