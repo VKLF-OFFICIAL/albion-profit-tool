@@ -124,9 +124,10 @@ function TransportPage() {
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
   const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
 
-  const salesTaxRate = premium ? 0.04 : 0.08;
-  const setupFeeRate = 0.025;
-  const totalTaxRate = salesTaxRate + setupFeeRate;
+  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
+  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
+  // existe cuando creas tu propia orden de venta en una ciudad.
+  const totalTaxRate = premium ? 0.04 : 0.08;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
