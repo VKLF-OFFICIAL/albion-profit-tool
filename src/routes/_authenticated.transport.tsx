@@ -168,7 +168,7 @@ function TransportPage() {
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmBuyPrice, quantity, totalTaxRate]);
+  }, [rows, bmSellPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
     const q = pickerQuery.trim().toLowerCase();
