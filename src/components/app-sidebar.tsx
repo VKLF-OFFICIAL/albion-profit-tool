@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { TrendingUp, Hammer, Coins, LogOut, Wallet } from "lucide-react";
+import { TrendingUp, Hammer, Coins, LogOut, Wallet, Home } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sidebar,
@@ -16,6 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 const items = [
+  { title: "Inicio", url: "/dashboard", icon: Home, desc: "Resumen general" },
   { title: "Transportes", url: "/transport", icon: TrendingUp, desc: "Flips ciudad → BM" },
   { title: "Refino", url: "/refining", icon: Hammer, desc: "Coste real con foco" },
   { title: "Oro & Cartera", url: "/gold", icon: Coins, desc: "Historial e indicador" },

@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
 import { Route as AuthenticatedRefiningRouteImport } from './routes/_authenticated.refining'
 import { Route as AuthenticatedGoldRouteImport } from './routes/_authenticated.gold'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -45,10 +46,16 @@ const AuthenticatedGoldRoute = AuthenticatedGoldRouteImport.update({
   path: '/gold',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/gold': typeof AuthenticatedGoldRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
@@ -56,6 +63,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/gold': typeof AuthenticatedGoldRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
@@ -65,20 +73,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/gold': typeof AuthenticatedGoldRoute
   '/_authenticated/refining': typeof AuthenticatedRefiningRoute
   '/_authenticated/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/gold' | '/refining' | '/transport'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/gold' | '/refining' | '/transport'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/gold' | '/refining' | '/transport'
+  to: '/' | '/auth' | '/dashboard' | '/gold' | '/refining' | '/transport'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/dashboard'
     | '/_authenticated/gold'
     | '/_authenticated/refining'
     | '/_authenticated/transport'
@@ -134,16 +144,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGoldRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGoldRoute: typeof AuthenticatedGoldRoute
   AuthenticatedRefiningRoute: typeof AuthenticatedRefiningRoute
   AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGoldRoute: AuthenticatedGoldRoute,
   AuthenticatedRefiningRoute: AuthenticatedRefiningRoute,
   AuthenticatedTransportRoute: AuthenticatedTransportRoute,
