@@ -417,11 +417,29 @@ function TransportPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div className="flex items-center gap-2">
-                <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
-                <Label htmlFor="premium" className="cursor-pointer">
-                  Premium activo (impuesto venta 4% vs 8%)
-                </Label>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
+                  <Label htmlFor="premium" className="cursor-pointer text-xs sm:text-sm">
+                    Premium (4% vs 8%)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs sm:text-sm">Modo venta BM</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={sellMode}
+                    onValueChange={(v) => v && setSellMode(v as SellMode)}
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="instasell" className="px-2 text-xs">
+                      Instasell
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="sellorder" className="px-2 text-xs">
+                      Orden venta
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -463,19 +481,27 @@ function TransportPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
-          label="Mercado Negro compra (máx)"
-          value={formatSilver(bmBuyPrice)}
+          label={sellMode === "instasell" ? "BM compra (instasell)" : "BM venta (orden)"}
+          value={formatSilver(bmRefPrice)}
           hint={
             blackMarket
-              ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}`
+              ? `Actualizado ${timeAgo(
+                  sellMode === "instasell"
+                    ? blackMarket.buy_price_max_date
+                    : blackMarket.sell_price_min_date,
+                )}`
               : "Sin datos"
           }
           highlight
         />
         <StatCard
-          label="Impuesto de venta (BM)"
-          value={`${(totalTaxRate * 100).toFixed(0)}%`}
-          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
+          label="Impuestos totales"
+          value={`${(totalTaxRate * 100).toFixed(1)}%`}
+          hint={
+            sellMode === "instasell"
+              ? `Sólo venta · ${premium ? "Premium 4%" : "Sin Premium 8%"}`
+              : `Setup 2.5% + venta ${premium ? "4%" : "8%"}`
+          }
         />
         <StatCard
           label="Cantidad por viaje"
@@ -483,6 +509,7 @@ function TransportPage() {
           hint="Modifica el campo arriba"
         />
       </div>
+
 
       {/* Tabla */}
       <Card>
