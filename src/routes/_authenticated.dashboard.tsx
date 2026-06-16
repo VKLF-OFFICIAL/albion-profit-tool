@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { ChevronRight, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/use-profile";
 import heroAdventurer from "@/assets/hero-adventurer.png";
 import iconPrices from "@/assets/icon-prices.png";
 import iconRefining from "@/assets/icon-refining.png";
@@ -59,14 +58,9 @@ const sections: Section[] = [
 ];
 
 function DashboardPage() {
-  const [name, setName] = useState("Aventurero");
+  const { username } = useProfile();
+  const name = username || "Aventurero";
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const email = data.user?.email;
-      if (email) setName(email.split("@")[0]);
-    });
-  }, []);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">

@@ -3,7 +3,9 @@ import { ArrowLeft, Home, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/use-profile";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -19,6 +21,8 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const isDashboard = pathname === "/dashboard";
+  const { username, avatarUrl } = useProfile();
+  const initial = (username || "?").slice(0, 1).toUpperCase();
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -41,11 +45,20 @@ function AuthenticatedLayout() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-            A
-          </div>
-          <span className="text-sm font-semibold tracking-tight">Albion M&amp;C</span>
+        <Link
+          to="/profile"
+          className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-accent"
+          aria-label="Mi perfil"
+        >
+          <Avatar className="h-7 w-7 border border-primary/40">
+            {avatarUrl ? <AvatarImage src={avatarUrl} alt={username} /> : null}
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+              {initial}
+            </AvatarFallback>
+          </Avatar>
+          <span className="max-w-[140px] truncate text-sm font-semibold tracking-tight">
+            {username || "Mi perfil"}
+          </span>
         </Link>
         <div className="flex-1" />
         {!isDashboard && (

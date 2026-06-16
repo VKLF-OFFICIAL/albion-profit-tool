@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
 import { Route as AuthenticatedRefiningRouteImport } from './routes/_authenticated.refining'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedGoldRouteImport } from './routes/_authenticated.gold'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 
@@ -41,6 +42,11 @@ const AuthenticatedRefiningRoute = AuthenticatedRefiningRouteImport.update({
   path: '/refining',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedGoldRoute = AuthenticatedGoldRouteImport.update({
   id: '/gold',
   path: '/gold',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/gold': typeof AuthenticatedGoldRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
 }
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/gold': typeof AuthenticatedGoldRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
 }
@@ -75,14 +83,29 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/gold': typeof AuthenticatedGoldRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/refining': typeof AuthenticatedRefiningRoute
   '/_authenticated/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/gold' | '/refining' | '/transport'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/gold'
+    | '/profile'
+    | '/refining'
+    | '/transport'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/gold' | '/refining' | '/transport'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/gold'
+    | '/profile'
+    | '/refining'
+    | '/transport'
   id:
     | '__root__'
     | '/'
@@ -90,6 +113,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/dashboard'
     | '/_authenticated/gold'
+    | '/_authenticated/profile'
     | '/_authenticated/refining'
     | '/_authenticated/transport'
   fileRoutesById: FileRoutesById
@@ -137,6 +161,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRefiningRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/gold': {
       id: '/_authenticated/gold'
       path: '/gold'
@@ -157,6 +188,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGoldRoute: typeof AuthenticatedGoldRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRefiningRoute: typeof AuthenticatedRefiningRoute
   AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
 }
@@ -164,6 +196,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGoldRoute: AuthenticatedGoldRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRefiningRoute: AuthenticatedRefiningRoute,
   AuthenticatedTransportRoute: AuthenticatedTransportRoute,
 }
