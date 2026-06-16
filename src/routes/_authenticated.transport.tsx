@@ -445,9 +445,9 @@ function TransportPage() {
           highlight
         />
         <StatCard
-          label="Impuesto efectivo de venta"
-          value={`${(totalTaxRate * 100).toFixed(1)}%`}
-          hint={`Setup 2.5% + Venta ${(salesTaxRate * 100).toFixed(0)}% (${premium ? "Premium" : "No Premium"})`}
+          label="Impuesto de venta (BM)"
+          value={`${(totalTaxRate * 100).toFixed(0)}%`}
+          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
         />
         <StatCard
           label="Cantidad por viaje"
