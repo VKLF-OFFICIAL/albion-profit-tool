@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Check,
   ChevronsUpDown,
+  ImageOff,
   Loader2,
   RefreshCw,
   Search,
+  Sparkles,
   TrendingUp,
 } from "lucide-react";
 
@@ -44,6 +46,7 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
 import {
@@ -51,7 +54,10 @@ import {
   QUALITIES,
   CITIES,
   BLACK_MARKET,
+  CATEGORY_LABEL,
   buildItemId,
+  itemImageUrl,
+  type AlbionCategory,
 } from "@/lib/albion-items";
 import { fetchPrices, formatSilver, timeAgo, type PriceRow } from "@/lib/albion-api";
 
@@ -71,6 +77,17 @@ export const Route = createFileRoute("/_authenticated/transport")({
 
 const TIERS = [4, 5, 6, 7, 8];
 const ENCHANTS = [0, 1, 2, 3, 4];
+const CATEGORIES: ("all" | AlbionCategory)[] = [
+  "all",
+  "Bag",
+  "Cape",
+  "Armor",
+  "Weapon",
+  "Mount",
+  "Tool",
+  "Consumable",
+  "Resource",
+];
 
 function TransportPage() {
   const [baseId, setBaseId] = useState<string>("BAG");
@@ -84,10 +101,11 @@ function TransportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openItemPicker, setOpenItemPicker] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<"all" | AlbionCategory>("all");
+  const [pickerQuery, setPickerQuery] = useState("");
 
   const itemId = useMemo(() => buildItemId(baseId, tier, enchant), [baseId, tier, enchant]);
 
-  // Fetch automático
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -103,19 +121,15 @@ function TransportPage() {
     };
   }, [itemId, quality]);
 
-  // Precio máximo de compra del Black Market para este ítem
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
   const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
 
-  // Comisión de mercado: 2.5% siempre (orden de venta) + tasa de venta 4% no-prem / 8% prem
-  // Para una venta por ORDEN DE VENTA: 2.5% (setup fee) + 4% (sales tax) si premium, 8% si no.
-  // Nota: Sales tax sin premium = 8%, con premium = 4%.
   const salesTaxRate = premium ? 0.04 : 0.08;
   const setupFeeRate = 0.025;
   const totalTaxRate = salesTaxRate + setupFeeRate;
 
   const calcRow = (r: PriceRow) => {
-    const buy = r.sell_price_min; // compramos al menor precio de venta de la ciudad
+    const buy = r.sell_price_min;
     if (!buy || !bmBuyPrice) {
       return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
@@ -127,13 +141,39 @@ function TransportPage() {
     return { buy, totalCost, gross, taxes, net, roi };
   };
 
-  // Filas ordenadas por las ciudades reales (excluyendo BM)
   const cityRows = CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
     return { city, row: r };
   });
 
+  // Mejor oportunidad: máximo ROI > 0
+  const bestDeal = useMemo(() => {
+    let best: { city: string; roi: number; net: number } | null = null;
+    for (const { city, row } of cityRows) {
+      if (!row) continue;
+      const c = calcRow(row);
+      if (!c.buy || c.roi <= 0) continue;
+      if (!best || c.roi > best.roi) best = { city, roi: c.roi, net: c.net };
+    }
+    return best;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, bmBuyPrice, quantity, totalTaxRate]);
+
+  const filteredItems = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    return ITEM_BASES.filter((it) => {
+      if (categoryFilter !== "all" && it.category !== categoryFilter) return false;
+      if (!q) return true;
+      return (
+        it.name.toLowerCase().includes(q) ||
+        it.base.toLowerCase().includes(q) ||
+        CATEGORY_LABEL[it.category].toLowerCase().includes(q)
+      );
+    });
+  }, [pickerQuery, categoryFilter]);
+
   const currentItem = ITEM_BASES.find((i) => i.base === baseId);
+  const heroImg = itemImageUrl(itemId, quality, 217);
 
   return (
     <div className="space-y-6">
@@ -153,162 +193,207 @@ function TransportPage() {
           description="Compara el precio de venta de cada ciudad con el precio que paga el Mercado Negro."
         >
           <p>
-            <strong>1. Selecciona un ítem.</strong> Usa el buscador con autocompletado, escribe
-            el ID interno (ej. <code>T4_BAG</code>) o elige uno de los ítems comunes del listado.
+            <strong>1. Selecciona un ítem.</strong> Filtra por categoría, escribe el nombre o el
+            ID interno (ej. <code>T4_BAG</code>) y elige de la lista visual.
           </p>
           <p>
             <strong>2. Ajusta filtros.</strong> Tier (T4–T8), Encantamiento (.0–.4) y Calidad
-            (Normal a Obra Maestra). La app refresca los precios automáticamente al cambiar
-            cualquier filtro.
+            (Normal a Obra Maestra). La app refresca precios automáticamente.
           </p>
           <p>
-            <strong>3. Introduce la cantidad</strong> que piensas mover y activa el toggle de{" "}
-            <em>Premium</em> si tu cuenta lo tiene (afecta al impuesto de venta).
+            <strong>3. Cantidad y Premium.</strong> Premium reduce el impuesto de venta del 8% al
+            4% (siempre se suma el 2.5% de setup fee).
           </p>
           <p>
-            <strong>4. Lee la tabla.</strong> Cada fila es una ciudad. Calculamos coste, ingreso
-            bruto del BM, impuestos (2.5% setup + 4%/8% venta), beneficio neto y ROI.
+            <strong>4. La banda dorada</strong> de la parte superior te dice cuál es la mejor
+            oportunidad de transporte ahora mismo (mayor ROI positivo).
           </p>
           <p>
             <span className="inline-block h-2 w-2 rounded-full bg-success mr-1" />
-            <strong>Verde</strong>: ROI &gt; 15%. {" "}
+            <strong>Verde</strong>: ROI &gt; 15%.
             <span className="inline-block h-2 w-2 rounded-full bg-warning mx-1" />
-            <strong>Amarillo</strong>: ROI 0–15%. {" "}
+            <strong>Amarillo</strong>: ROI 0–15%.
             <span className="inline-block h-2 w-2 rounded-full bg-danger mx-1" />
             <strong>Rojo</strong>: pérdidas.
-          </p>
-          <p className="text-xs">
-            Fuente de datos: <code>west.albion-online-data.com</code> (proyecto comunitario, los
-            precios dependen de jugadores subiendo datos recientes).
           </p>
         </TutorialModal>
       </header>
 
-      {/* Filtros */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-            {/* Item picker */}
-            <div className="space-y-2 lg:col-span-2">
-              <Label>Ítem</Label>
-              <Popover open={openItemPicker} onOpenChange={setOpenItemPicker}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between font-normal"
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{currentItem?.name ?? baseId}</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        {baseId}
-                      </span>
-                    </span>
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[340px] p-0" align="start">
-                  <Command
-                    filter={(value, search) =>
-                      value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
-                    }
-                  >
-                    <CommandInput placeholder="Buscar por nombre o ID (ej. T4_BAG)..." />
-                    <CommandList>
-                      <CommandEmpty>Sin resultados.</CommandEmpty>
-                      <CommandGroup>
-                        {ITEM_BASES.map((it) => (
-                          <CommandItem
-                            key={it.base}
-                            value={`${it.name} ${it.base}`}
-                            onSelect={() => {
-                              setBaseId(it.base);
-                              setOpenItemPicker(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                baseId === it.base ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <div className="flex flex-col leading-tight flex-1 min-w-0">
-                              <span className="truncate">{it.name}</span>
-                              <span className="font-mono text-[10px] text-muted-foreground truncate">
-                                {it.base}
-                              </span>
-                            </div>
-                            <Badge variant="secondary" className="ml-2 text-[10px]">
-                              {it.category}
-                            </Badge>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tier</Label>
-              <Select value={String(tier)} onValueChange={(v) => setTier(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TIERS.map((t) => (
-                    <SelectItem key={t} value={String(t)}>T{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Encantamiento</Label>
-              <Select value={String(enchant)} onValueChange={(v) => setEnchant(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ENCHANTS.map((e) => (
-                    <SelectItem key={e} value={String(e)}>.{e}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Calidad</Label>
-              <Select value={String(quality)} onValueChange={(v) => setQuality(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {QUALITIES.map((q) => (
-                    <SelectItem key={q.value} value={String(q.value)}>
-                      {q.value}. {q.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cantidad</Label>
-              <Input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-              />
-            </div>
+      {/* Item hero + Filtros */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-0 md:flex-row">
+          {/* Hero del ítem */}
+          <div className="relative flex shrink-0 items-center justify-center bg-gradient-to-br from-primary/10 via-accent/20 to-background p-6 md:w-56 md:border-r md:border-border">
+            <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_50%_50%,oklch(0.72_0.17_158/_0.25),transparent_70%)]" />
+            <ItemImage
+              src={heroImg}
+              alt={currentItem?.name ?? itemId}
+              className="relative h-32 w-32 drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] md:h-40 md:w-40"
+            />
+            <Badge
+              variant="outline"
+              className="absolute bottom-2 left-2 border-primary/40 bg-background/80 font-mono text-[10px] backdrop-blur"
+            >
+              {itemId}
+            </Badge>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-            <div className="flex items-center gap-2">
-              <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
-              <Label htmlFor="premium" className="cursor-pointer">
-                Premium activo (impuesto venta 4% vs 8%)
-              </Label>
+          <CardContent className="flex-1 pt-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+              {/* Item picker */}
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Ítem</Label>
+                <Popover open={openItemPicker} onOpenChange={setOpenItemPicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{currentItem?.name ?? baseId}</span>
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[min(420px,calc(100vw-2rem))] p-0"
+                    align="start"
+                  >
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Buscar por nombre o ID (ej. BAG, BOW)…"
+                        value={pickerQuery}
+                        onValueChange={setPickerQuery}
+                      />
+                      <div className="flex flex-wrap gap-1 border-b border-border p-2">
+                        {CATEGORIES.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setCategoryFilter(c)}
+                            className={cn(
+                              "rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors",
+                              categoryFilter === c
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground",
+                            )}
+                          >
+                            {c === "all" ? "Todos" : CATEGORY_LABEL[c]}
+                          </button>
+                        ))}
+                      </div>
+                      <CommandList className="max-h-[340px]">
+                        <CommandEmpty>Sin resultados.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredItems.map((it) => {
+                            const previewId = buildItemId(it.base, tier, enchant);
+                            return (
+                              <CommandItem
+                                key={it.base}
+                                value={it.base}
+                                onSelect={() => {
+                                  setBaseId(it.base);
+                                  setOpenItemPicker(false);
+                                }}
+                                className="gap-2"
+                              >
+                                <ItemImage
+                                  src={itemImageUrl(previewId, quality, 64)}
+                                  alt={it.name}
+                                  className="h-9 w-9 shrink-0 rounded-md bg-accent/40"
+                                />
+                                <div className="flex min-w-0 flex-1 flex-col leading-tight">
+                                  <span className="truncate text-sm">{it.name}</span>
+                                  <span className="font-mono text-[10px] text-muted-foreground truncate">
+                                    {it.base}
+                                  </span>
+                                </div>
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {CATEGORY_LABEL[it.category]}
+                                </Badge>
+                                {baseId === it.base && (
+                                  <Check className="h-4 w-4 text-primary" />
+                                )}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tier</Label>
+                <ToggleGroup
+                  type="single"
+                  value={String(tier)}
+                  onValueChange={(v) => v && setTier(Number(v))}
+                  className="justify-start"
+                  size="sm"
+                >
+                  {TIERS.map((t) => (
+                    <ToggleGroupItem key={t} value={String(t)} className="px-2 text-xs">
+                      T{t}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Encantamiento</Label>
+                <ToggleGroup
+                  type="single"
+                  value={String(enchant)}
+                  onValueChange={(v) => v !== "" && setEnchant(Number(v))}
+                  className="justify-start"
+                  size="sm"
+                >
+                  {ENCHANTS.map((e) => (
+                    <ToggleGroupItem key={e} value={String(e)} className="px-2 text-xs">
+                      .{e}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Calidad</Label>
+                <Select value={String(quality)} onValueChange={(v) => setQuality(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {QUALITIES.map((q) => (
+                      <SelectItem key={q.value} value={String(q.value)}>
+                        {q.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cantidad</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="font-mono">{itemId}</span>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
+                <Label htmlFor="premium" className="cursor-pointer">
+                  Premium activo (impuesto venta 4% vs 8%)
+                </Label>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -325,16 +410,37 @@ function TransportPage() {
                 Refrescar
               </Button>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        </div>
       </Card>
 
-      {/* Black Market info */}
+      {/* Banner mejor oportunidad */}
+      {bestDeal ? (
+        <div className="flex items-center gap-3 rounded-lg border border-success/40 bg-gradient-to-r from-success/15 via-success/5 to-transparent px-4 py-3">
+          <Sparkles className="h-5 w-5 shrink-0 text-success" />
+          <div className="flex-1 text-sm">
+            Mejor oportunidad ahora:{" "}
+            <strong className="text-success">{bestDeal.city} → Mercado Negro</strong> con{" "}
+            <strong>ROI +{bestDeal.roi.toFixed(1)}%</strong> y beneficio neto{" "}
+            <strong>{formatSilver(bestDeal.net)}</strong> plata.
+          </div>
+        </div>
+      ) : !loading && rows.length > 0 ? (
+        <div className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-warning">
+          Ninguna ciudad es rentable ahora mismo para este ítem en estas condiciones.
+        </div>
+      ) : null}
+
+      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
           label="Mercado Negro compra (máx)"
           value={formatSilver(bmBuyPrice)}
-          hint={blackMarket ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}` : "Sin datos"}
+          hint={
+            blackMarket
+              ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}`
+              : "Sin datos"
+          }
           highlight
         />
         <StatCard
@@ -366,7 +472,7 @@ function TransportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Ciudad</TableHead>
-                    <TableHead className="text-right">Compra min (ciudad)</TableHead>
+                    <TableHead className="text-right">Compra min</TableHead>
                     <TableHead className="text-right">Actualizado</TableHead>
                     <TableHead className="text-right">Coste total</TableHead>
                     <TableHead className="text-right">Ingresos BM</TableHead>
@@ -387,6 +493,7 @@ function TransportPage() {
                           : roi > 0
                             ? "warning"
                             : "danger";
+                    const isBest = bestDeal?.city === city;
                     return (
                       <TableRow
                         key={city}
@@ -394,17 +501,33 @@ function TransportPage() {
                           tone === "success" && "bg-success/5 hover:bg-success/10",
                           tone === "warning" && "bg-warning/5 hover:bg-warning/10",
                           tone === "danger" && "bg-danger/5 hover:bg-danger/10",
+                          isBest && "ring-1 ring-inset ring-success/50",
                         )}
                       >
-                        <TableCell className="font-medium">{city}</TableCell>
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-2">
+                            {city}
+                            {isBest && (
+                              <Sparkles className="h-3.5 w-3.5 text-success" />
+                            )}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right">
-                          {c?.buy ? formatSilver(c.buy) : <span className="text-muted-foreground">—</span>}
+                          {c?.buy ? (
+                            formatSilver(c.buy)
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">
                           {timeAgo(row?.sell_price_min_date)}
                         </TableCell>
-                        <TableCell className="text-right">{c?.buy ? formatSilver(c.totalCost) : "—"}</TableCell>
-                        <TableCell className="text-right">{c?.buy ? formatSilver(c.gross) : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          {c?.buy ? formatSilver(c.totalCost) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {c?.buy ? formatSilver(c.gross) : "—"}
+                        </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {c?.buy ? formatSilver(c.taxes) : "—"}
                         </TableCell>
@@ -446,9 +569,8 @@ function TransportPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground text-center">
-        Datos cortesía del proyecto comunitario Albion Online Data (servidor Americas). Los precios
-        se basan en lo que los jugadores suben con el cliente de datos; ítems poco comerciados
-        pueden tener información desactualizada.
+        Datos cortesía del proyecto comunitario Albion Online Data e imágenes de
+        render.albiononline.com (servidor Americas).
       </p>
     </div>
   );
@@ -466,14 +588,56 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <Card className={cn(highlight && "border-primary/40 shadow-[0_0_0_1px] shadow-primary/10")}>
+    <Card
+      className={cn(
+        highlight && "border-primary/40 shadow-[0_0_0_1px] shadow-primary/10",
+      )}
+    >
       <CardContent className="pt-6">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
         <div className={cn("mt-1 text-2xl font-bold tabular", highlight && "text-primary")}>
           {value}
         </div>
         {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
       </CardContent>
     </Card>
+  );
+}
+
+function ItemImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [errored, setErrored] = useState(false);
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
+  if (errored) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-md bg-muted text-muted-foreground",
+          className,
+        )}
+      >
+        <ImageOff className="h-1/2 w-1/2 opacity-50" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setErrored(true)}
+      className={cn("object-contain", className)}
+    />
   );
 }
