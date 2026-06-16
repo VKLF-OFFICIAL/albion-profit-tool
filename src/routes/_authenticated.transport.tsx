@@ -124,9 +124,10 @@ function TransportPage() {
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
   const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
 
-  const salesTaxRate = premium ? 0.04 : 0.08;
-  const setupFeeRate = 0.025;
-  const totalTaxRate = salesTaxRate + setupFeeRate;
+  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
+  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
+  // existe cuando creas tu propia orden de venta en una ciudad.
+  const totalTaxRate = premium ? 0.04 : 0.08;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
@@ -201,8 +202,9 @@ function TransportPage() {
             (Normal a Obra Maestra). La app refresca precios automáticamente.
           </p>
           <p>
-            <strong>3. Cantidad y Premium.</strong> Premium reduce el impuesto de venta del 8% al
-            4% (siempre se suma el 2.5% de setup fee).
+            <strong>3. Cantidad y Premium.</strong> En el Mercado Negro vendes rellenando órdenes
+            (Sell Now), por lo que <strong>NO</strong> se paga setup fee. Sólo aplica el
+            impuesto de venta: <strong>4 % con Premium</strong> y <strong>8 % sin Premium</strong>.
           </p>
           <p>
             <strong>4. La banda dorada</strong> de la parte superior te dice cuál es la mejor
@@ -444,9 +446,9 @@ function TransportPage() {
           highlight
         />
         <StatCard
-          label="Impuesto efectivo de venta"
-          value={`${(totalTaxRate * 100).toFixed(1)}%`}
-          hint={`Setup 2.5% + Venta ${(salesTaxRate * 100).toFixed(0)}% (${premium ? "Premium" : "No Premium"})`}
+          label="Impuesto de venta (BM)"
+          value={`${(totalTaxRate * 100).toFixed(0)}%`}
+          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
         />
         <StatCard
           label="Cantidad por viaje"
