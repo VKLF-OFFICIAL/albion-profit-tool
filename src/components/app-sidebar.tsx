@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { TrendingUp, Hammer, Coins, LogOut, Wallet } from "lucide-react";
+import { TrendingUp, Hammer, Coins, LogOut, Wallet, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sidebar,
@@ -14,6 +14,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+
+const dashboard = { title: "Dashboard", url: "/", icon: LayoutDashboard, desc: "Inicio" };
 
 const items = [
   { title: "Transportes", url: "/transport", icon: TrendingUp, desc: "Flips ciudad → BM" },
