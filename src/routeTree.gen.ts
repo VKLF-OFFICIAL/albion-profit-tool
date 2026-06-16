@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
 import { Route as AuthenticatedRefiningRouteImport } from './routes/_authenticated.refining'
 import { Route as AuthenticatedGoldRouteImport } from './routes/_authenticated.gold'
@@ -25,10 +25,10 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTransportRoute = AuthenticatedTransportRouteImport.update({
   id: '/transport',
@@ -47,44 +47,45 @@ const AuthenticatedGoldRoute = AuthenticatedGoldRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
+  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gold': typeof AuthenticatedGoldRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gold': typeof AuthenticatedGoldRoute
   '/refining': typeof AuthenticatedRefiningRoute
   '/transport': typeof AuthenticatedTransportRoute
-  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/gold': typeof AuthenticatedGoldRoute
   '/_authenticated/refining': typeof AuthenticatedRefiningRoute
   '/_authenticated/transport': typeof AuthenticatedTransportRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/auth' | '/gold' | '/refining' | '/transport'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/gold' | '/refining' | '/transport' | '/'
+  to: '/' | '/auth' | '/gold' | '/refining' | '/transport'
   id:
     | '__root__'
+    | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/gold'
     | '/_authenticated/refining'
     | '/_authenticated/transport'
-    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
 }
@@ -105,12 +106,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/transport': {
       id: '/_authenticated/transport'
@@ -140,14 +141,12 @@ interface AuthenticatedRouteChildren {
   AuthenticatedGoldRoute: typeof AuthenticatedGoldRoute
   AuthenticatedRefiningRoute: typeof AuthenticatedRefiningRoute
   AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGoldRoute: AuthenticatedGoldRoute,
   AuthenticatedRefiningRoute: AuthenticatedRefiningRoute,
   AuthenticatedTransportRoute: AuthenticatedTransportRoute,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -155,6 +154,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
 }
