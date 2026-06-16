@@ -60,9 +60,6 @@ import {
   type AlbionCategory,
 } from "@/lib/albion-items";
 import { fetchPrices, formatSilver, timeAgo, type PriceRow } from "@/lib/albion-api";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-
-type SellMode = "instasell" | "order";
 
 export const Route = createFileRoute("/_authenticated/transport")({
   head: () => ({
@@ -99,7 +96,6 @@ function TransportPage() {
   const [quality, setQuality] = useState<number>(1);
   const [quantity, setQuantity] = useState<number>(100);
   const [premium, setPremium] = useState<boolean>(true);
-  const [sellMode, setSellMode] = useState<SellMode>("instasell");
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -109,15 +105,12 @@ function TransportPage() {
   const [pickerQuery, setPickerQuery] = useState("");
 
   const itemId = useMemo(() => buildItemId(baseId, tier, enchant), [baseId, tier, enchant]);
-  // Debounce de 500 ms para no machacar la API comunitaria con cada cambio.
-  const debouncedItemId = useDebouncedValue(itemId, 500);
-  const debouncedQuality = useDebouncedValue(quality, 500);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchPrices(debouncedItemId, debouncedQuality)
+    fetchPrices(itemId, quality)
       .then((data) => {
         if (!cancelled) setRows(data);
       })
@@ -126,26 +119,23 @@ function TransportPage() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedItemId, debouncedQuality]);
+  }, [itemId, quality]);
 
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
-  // Instasell: rellenamos una orden de compra → cobramos el `buy_price_max`.
-  // Sell Order: listamos a `sell_price_min` y pagamos además 2,5 % de setup fee.
-  const bmInstasellPrice = blackMarket?.buy_price_max ?? 0;
-  const bmOrderPrice = blackMarket?.sell_price_min ?? 0;
-  const bmSellPrice = sellMode === "instasell" ? bmInstasellPrice : bmOrderPrice;
+  const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
 
-  const sellTaxRate = premium ? 0.04 : 0.08;
-  const setupFeeRate = sellMode === "order" ? 0.025 : 0;
-  const totalTaxRate = sellTaxRate + setupFeeRate;
+  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
+  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
+  // existe cuando creas tu propia orden de venta en una ciudad.
+  const totalTaxRate = premium ? 0.04 : 0.08;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
-    if (!buy || !bmSellPrice) {
+    if (!buy || !bmBuyPrice) {
       return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
-    const gross = bmSellPrice * quantity;
+    const gross = bmBuyPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
@@ -168,7 +158,7 @@ function TransportPage() {
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmSellPrice, quantity, totalTaxRate]);
+  }, [rows, bmBuyPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
     const q = pickerQuery.trim().toLowerCase();
@@ -400,29 +390,11 @@ function TransportPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
-                  <Label htmlFor="premium" className="cursor-pointer">
-                    Premium (4% vs 8%)
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground">Modo de venta BM:</Label>
-                  <ToggleGroup
-                    type="single"
-                    value={sellMode}
-                    onValueChange={(v) => v && setSellMode(v as SellMode)}
-                    size="sm"
-                  >
-                    <ToggleGroupItem value="instasell" className="px-2 text-xs">
-                      Venta directa
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="order" className="px-2 text-xs">
-                      Orden de venta
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+              <div className="flex items-center gap-2">
+                <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
+                <Label htmlFor="premium" className="cursor-pointer">
+                  Premium activo (impuesto venta 4% vs 8%)
+                </Label>
               </div>
               <Button
                 variant="ghost"
@@ -464,27 +436,19 @@ function TransportPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
-          label={sellMode === "instasell" ? "BM compra (instasell)" : "BM venta (orden)"}
-          value={formatSilver(bmSellPrice)}
+          label="Mercado Negro compra (máx)"
+          value={formatSilver(bmBuyPrice)}
           hint={
             blackMarket
-              ? `Actualizado ${timeAgo(
-                  sellMode === "instasell"
-                    ? blackMarket.buy_price_max_date
-                    : blackMarket.sell_price_min_date,
-                )}`
+              ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}`
               : "Sin datos"
           }
           highlight
         />
         <StatCard
-          label="Impuestos totales"
-          value={`${(totalTaxRate * 100).toFixed(1)}%`}
-          hint={
-            sellMode === "instasell"
-              ? `Sólo impuesto venta ${(sellTaxRate * 100).toFixed(0)}%`
-              : `Setup 2.5% + venta ${(sellTaxRate * 100).toFixed(0)}%`
-          }
+          label="Impuesto de venta (BM)"
+          value={`${(totalTaxRate * 100).toFixed(0)}%`}
+          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
         />
         <StatCard
           label="Cantidad por viaje"
