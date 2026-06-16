@@ -29,7 +29,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/transport", replace: true });
+      if (data.session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
 
@@ -40,7 +40,7 @@ function AuthPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Bienvenido");
-    navigate({ to: "/transport", replace: true });
+    navigate({ to: "/dashboard", replace: true });
   }
 
   async function handleSignUp(e: React.FormEvent) {
@@ -49,7 +49,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/transport` },
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
