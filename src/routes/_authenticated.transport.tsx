@@ -184,10 +184,10 @@ function TransportPage() {
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmBuyPrice, quantity, totalTaxRate]);
+  }, [rows, bmRefPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
-    const q = pickerQuery.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     return ITEM_BASES.filter((it) => {
       if (categoryFilter !== "all" && it.category !== categoryFilter) return false;
       if (!q) return true;
@@ -197,7 +197,8 @@ function TransportPage() {
         CATEGORY_LABEL[it.category].toLowerCase().includes(q)
       );
     });
-  }, [pickerQuery, categoryFilter]);
+  }, [debouncedQuery, categoryFilter]);
+
 
   const currentItem = ITEM_BASES.find((i) => i.base === baseId);
   const heroImg = itemImageUrl(itemId, quality, 217);
