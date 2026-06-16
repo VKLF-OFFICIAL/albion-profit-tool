@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { TrendingUp, Hammer, Coins, LogOut, Wallet } from "lucide-react";
+import { TrendingUp, Hammer, Coins, LogOut, Wallet, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sidebar,
@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 
+const dashboard = { title: "Dashboard", url: "/", icon: LayoutDashboard, desc: "Inicio" };
+
 const items = [
+  dashboard,
   { title: "Transportes", url: "/transport", icon: TrendingUp, desc: "Flips ciudad → BM" },
   { title: "Refino", url: "/refining", icon: Hammer, desc: "Coste real con foco" },
   { title: "Oro & Cartera", url: "/gold", icon: Coins, desc: "Historial e indicador" },
@@ -52,7 +55,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = pathname === item.url || pathname.startsWith(item.url + "/");
+                const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(item.url + "/");
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
