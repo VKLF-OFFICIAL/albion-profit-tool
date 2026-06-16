@@ -9,38 +9,103 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated.transport'
+import { Route as AuthenticatedRefiningRouteImport } from './routes/_authenticated.refining'
+import { Route as AuthenticatedGoldRouteImport } from './routes/_authenticated.gold'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTransportRoute = AuthenticatedTransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedRefiningRoute = AuthenticatedRefiningRouteImport.update({
+  id: '/refining',
+  path: '/refining',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGoldRoute = AuthenticatedGoldRouteImport.update({
+  id: '/gold',
+  path: '/gold',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/gold': typeof AuthenticatedGoldRoute
+  '/refining': typeof AuthenticatedRefiningRoute
+  '/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/gold': typeof AuthenticatedGoldRoute
+  '/refining': typeof AuthenticatedRefiningRoute
+  '/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/gold': typeof AuthenticatedGoldRoute
+  '/_authenticated/refining': typeof AuthenticatedRefiningRoute
+  '/_authenticated/transport': typeof AuthenticatedTransportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/auth' | '/gold' | '/refining' | '/transport'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/auth' | '/gold' | '/refining' | '/transport'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/gold'
+    | '/_authenticated/refining'
+    | '/_authenticated/transport'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +113,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/transport': {
+      id: '/_authenticated/transport'
+      path: '/transport'
+      fullPath: '/transport'
+      preLoaderRoute: typeof AuthenticatedTransportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/refining': {
+      id: '/_authenticated/refining'
+      path: '/refining'
+      fullPath: '/refining'
+      preLoaderRoute: typeof AuthenticatedRefiningRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/gold': {
+      id: '/_authenticated/gold'
+      path: '/gold'
+      fullPath: '/gold'
+      preLoaderRoute: typeof AuthenticatedGoldRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedGoldRoute: typeof AuthenticatedGoldRoute
+  AuthenticatedRefiningRoute: typeof AuthenticatedRefiningRoute
+  AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedGoldRoute: AuthenticatedGoldRoute,
+  AuthenticatedRefiningRoute: AuthenticatedRefiningRoute,
+  AuthenticatedTransportRoute: AuthenticatedTransportRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
