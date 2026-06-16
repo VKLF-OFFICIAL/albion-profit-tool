@@ -464,19 +464,27 @@ function TransportPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
-          label="Mercado Negro compra (máx)"
-          value={formatSilver(bmBuyPrice)}
+          label={sellMode === "instasell" ? "BM compra (instasell)" : "BM venta (orden)"}
+          value={formatSilver(bmSellPrice)}
           hint={
             blackMarket
-              ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}`
+              ? `Actualizado ${timeAgo(
+                  sellMode === "instasell"
+                    ? blackMarket.buy_price_max_date
+                    : blackMarket.sell_price_min_date,
+                )}`
               : "Sin datos"
           }
           highlight
         />
         <StatCard
-          label="Impuesto de venta (BM)"
-          value={`${(totalTaxRate * 100).toFixed(0)}%`}
-          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
+          label="Impuestos totales"
+          value={`${(totalTaxRate * 100).toFixed(1)}%`}
+          hint={
+            sellMode === "instasell"
+              ? `Sólo impuesto venta ${(sellTaxRate * 100).toFixed(0)}%`
+              : `Setup 2.5% + venta ${(sellTaxRate * 100).toFixed(0)}%`
+          }
         />
         <StatCard
           label="Cantidad por viaje"
