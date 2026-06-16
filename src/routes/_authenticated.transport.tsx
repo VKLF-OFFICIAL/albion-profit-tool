@@ -99,6 +99,7 @@ function TransportPage() {
   const [quality, setQuality] = useState<number>(1);
   const [quantity, setQuantity] = useState<number>(100);
   const [premium, setPremium] = useState<boolean>(true);
+  const [sellMode, setSellMode] = useState<SellMode>("instasell");
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,12 +109,15 @@ function TransportPage() {
   const [pickerQuery, setPickerQuery] = useState("");
 
   const itemId = useMemo(() => buildItemId(baseId, tier, enchant), [baseId, tier, enchant]);
+  // Debounce de 500 ms para no machacar la API comunitaria con cada cambio.
+  const debouncedItemId = useDebouncedValue(itemId, 500);
+  const debouncedQuality = useDebouncedValue(quality, 500);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchPrices(itemId, quality)
+    fetchPrices(debouncedItemId, debouncedQuality)
       .then((data) => {
         if (!cancelled) setRows(data);
       })
@@ -122,23 +126,26 @@ function TransportPage() {
     return () => {
       cancelled = true;
     };
-  }, [itemId, quality]);
+  }, [debouncedItemId, debouncedQuality]);
 
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
-  const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
+  // Instasell: rellenamos una orden de compra → cobramos el `buy_price_max`.
+  // Sell Order: listamos a `sell_price_min` y pagamos además 2,5 % de setup fee.
+  const bmInstasellPrice = blackMarket?.buy_price_max ?? 0;
+  const bmOrderPrice = blackMarket?.sell_price_min ?? 0;
+  const bmSellPrice = sellMode === "instasell" ? bmInstasellPrice : bmOrderPrice;
 
-  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
-  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
-  // existe cuando creas tu propia orden de venta en una ciudad.
-  const totalTaxRate = premium ? 0.04 : 0.08;
+  const sellTaxRate = premium ? 0.04 : 0.08;
+  const setupFeeRate = sellMode === "order" ? 0.025 : 0;
+  const totalTaxRate = sellTaxRate + setupFeeRate;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
-    if (!buy || !bmBuyPrice) {
+    if (!buy || !bmSellPrice) {
       return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
-    const gross = bmBuyPrice * quantity;
+    const gross = bmSellPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
