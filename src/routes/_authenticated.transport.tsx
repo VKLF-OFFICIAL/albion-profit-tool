@@ -202,8 +202,9 @@ function TransportPage() {
             (Normal a Obra Maestra). La app refresca precios automáticamente.
           </p>
           <p>
-            <strong>3. Cantidad y Premium.</strong> Premium reduce el impuesto de venta del 8% al
-            4% (siempre se suma el 2.5% de setup fee).
+            <strong>3. Cantidad y Premium.</strong> En el Mercado Negro vendes rellenando órdenes
+            (Sell Now), por lo que <strong>NO</strong> se paga setup fee. Sólo aplica el
+            impuesto de venta: <strong>4 % con Premium</strong> y <strong>8 % sin Premium</strong>.
           </p>
           <p>
             <strong>4. La banda dorada</strong> de la parte superior te dice cuál es la mejor
