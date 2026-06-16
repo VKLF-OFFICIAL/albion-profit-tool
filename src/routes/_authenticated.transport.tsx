@@ -89,6 +89,17 @@ const CATEGORIES: ("all" | AlbionCategory)[] = [
   "Resource",
 ];
 
+type SellMode = "instasell" | "sellorder";
+
+function useDebounced<T>(value: T, delay = 500): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 function TransportPage() {
   const [baseId, setBaseId] = useState<string>("BAG");
   const [tier, setTier] = useState<number>(4);
@@ -96,6 +107,7 @@ function TransportPage() {
   const [quality, setQuality] = useState<number>(1);
   const [quantity, setQuantity] = useState<number>(100);
   const [premium, setPremium] = useState<boolean>(true);
+  const [sellMode, setSellMode] = useState<SellMode>("instasell");
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,6 +115,8 @@ function TransportPage() {
   const [openItemPicker, setOpenItemPicker] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<"all" | AlbionCategory>("all");
   const [pickerQuery, setPickerQuery] = useState("");
+  // Debounce de 500ms para evitar rate-limiting en filtros y futuras búsquedas a la API.
+  const debouncedQuery = useDebounced(pickerQuery, 500);
 
   const itemId = useMemo(() => buildItemId(baseId, tier, enchant), [baseId, tier, enchant]);
 
@@ -110,37 +124,49 @@ function TransportPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchPrices(itemId, quality)
-      .then((data) => {
-        if (!cancelled) setRows(data);
-      })
-      .catch((e: Error) => !cancelled && setError(e.message))
-      .finally(() => !cancelled && setLoading(false));
+    // Pequeño debounce también antes del fetch: si el usuario cambia tier/enchant
+    // rápidamente, sólo se dispara la última petición tras 350ms.
+    const t = setTimeout(() => {
+      fetchPrices(itemId, quality)
+        .then((data) => {
+          if (!cancelled) setRows(data);
+        })
+        .catch((e: Error) => !cancelled && setError(e.message))
+        .finally(() => !cancelled && setLoading(false));
+    }, 350);
     return () => {
       cancelled = true;
+      clearTimeout(t);
     };
   }, [itemId, quality]);
 
   const blackMarket = rows.find((r) => r.city === BLACK_MARKET);
-  const bmBuyPrice = blackMarket?.buy_price_max ?? 0;
+  // Instasell  → rellenamos órdenes de COMPRA del BM (buy_price_max).
+  // Sell Order → publicamos a precio competitivo, referencia sell_price_min.
+  const bmInstasellPrice = blackMarket?.buy_price_max ?? 0;
+  const bmSellOrderPrice = blackMarket?.sell_price_min ?? 0;
+  const bmRefPrice = sellMode === "instasell" ? bmInstasellPrice : bmSellOrderPrice;
 
-  // En el Mercado Negro vendemos rellenando órdenes de compra ("Vender ahora"),
-  // así que SOLO se aplica el impuesto de venta. El setup fee del 2,5% sólo
-  // existe cuando creas tu propia orden de venta en una ciudad.
-  const totalTaxRate = premium ? 0.04 : 0.08;
+  // Impuestos:
+  //  - Instasell: sólo impuesto de venta (4% premium / 8% sin premium).
+  //  - Sell Order: setup fee 2.5% al publicar + impuesto de venta al vender.
+  const salesTax = premium ? 0.04 : 0.08;
+  const setupFee = sellMode === "sellorder" ? 0.025 : 0;
+  const totalTaxRate = salesTax + setupFee;
 
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
-    if (!buy || !bmBuyPrice) {
+    if (!buy || !bmRefPrice) {
       return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
-    const gross = bmBuyPrice * quantity;
+    const gross = bmRefPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
     return { buy, totalCost, gross, taxes, net, roi };
   };
+
 
   const cityRows = CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
@@ -158,10 +184,10 @@ function TransportPage() {
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmBuyPrice, quantity, totalTaxRate]);
+  }, [rows, bmRefPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
-    const q = pickerQuery.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     return ITEM_BASES.filter((it) => {
       if (categoryFilter !== "all" && it.category !== categoryFilter) return false;
       if (!q) return true;
@@ -171,7 +197,8 @@ function TransportPage() {
         CATEGORY_LABEL[it.category].toLowerCase().includes(q)
       );
     });
-  }, [pickerQuery, categoryFilter]);
+  }, [debouncedQuery, categoryFilter]);
+
 
   const currentItem = ITEM_BASES.find((i) => i.base === baseId);
   const heroImg = itemImageUrl(itemId, quality, 217);
@@ -390,11 +417,29 @@ function TransportPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <div className="flex items-center gap-2">
-                <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
-                <Label htmlFor="premium" className="cursor-pointer">
-                  Premium activo (impuesto venta 4% vs 8%)
-                </Label>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch id="premium" checked={premium} onCheckedChange={setPremium} />
+                  <Label htmlFor="premium" className="cursor-pointer text-xs sm:text-sm">
+                    Premium (4% vs 8%)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs sm:text-sm">Modo venta BM</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={sellMode}
+                    onValueChange={(v) => v && setSellMode(v as SellMode)}
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="instasell" className="px-2 text-xs">
+                      Instasell
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="sellorder" className="px-2 text-xs">
+                      Orden venta
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -436,19 +481,27 @@ function TransportPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
-          label="Mercado Negro compra (máx)"
-          value={formatSilver(bmBuyPrice)}
+          label={sellMode === "instasell" ? "BM compra (instasell)" : "BM venta (orden)"}
+          value={formatSilver(bmRefPrice)}
           hint={
             blackMarket
-              ? `Actualizado ${timeAgo(blackMarket.buy_price_max_date)}`
+              ? `Actualizado ${timeAgo(
+                  sellMode === "instasell"
+                    ? blackMarket.buy_price_max_date
+                    : blackMarket.sell_price_min_date,
+                )}`
               : "Sin datos"
           }
           highlight
         />
         <StatCard
-          label="Impuesto de venta (BM)"
-          value={`${(totalTaxRate * 100).toFixed(0)}%`}
-          hint={premium ? "Premium activo — 4%" : "Sin Premium — 8% (activa Premium para 4%)"}
+          label="Impuestos totales"
+          value={`${(totalTaxRate * 100).toFixed(1)}%`}
+          hint={
+            sellMode === "instasell"
+              ? `Sólo venta · ${premium ? "Premium 4%" : "Sin Premium 8%"}`
+              : `Setup 2.5% + venta ${premium ? "4%" : "8%"}`
+          }
         />
         <StatCard
           label="Cantidad por viaje"
@@ -456,6 +509,7 @@ function TransportPage() {
           hint="Modifica el campo arriba"
         />
       </div>
+
 
       {/* Tabla */}
       <Card>
