@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 const dashboard = { title: "Dashboard", url: "/", icon: LayoutDashboard, desc: "Inicio" };
 
 const items = [
+  dashboard,
   { title: "Transportes", url: "/transport", icon: TrendingUp, desc: "Flips ciudad → BM" },
   { title: "Refino", url: "/refining", icon: Hammer, desc: "Coste real con foco" },
   { title: "Oro & Cartera", url: "/gold", icon: Coins, desc: "Historial e indicador" },
