@@ -78,13 +78,16 @@ function DashboardPage() {
       <div className="flex justify-center">
         <div className="relative">
           <div className="absolute inset-0 -z-10 rounded-full bg-primary/20 blur-3xl" />
-          <img
-            src={heroAdventurer}
-            alt="Aventurero de Albion"
-            width={320}
-            height={320}
-            className="h-64 w-64 sm:h-80 sm:w-80 object-contain drop-shadow-2xl"
-          />
+          <div className="relative">
+            <img
+              src={heroAdventurer}
+              alt="Aventurero de Albion"
+              width={320}
+              height={320}
+              className="h-64 w-64 sm:h-80 sm:w-80 object-contain drop-shadow-2xl"
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          </div>
         </div>
       </div>
 

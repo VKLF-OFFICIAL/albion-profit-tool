@@ -157,34 +157,39 @@ function TransportPage() {
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
     if (!buy || !bmRefPrice) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: false };
+    }
+    if (buy >= 999999) {
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: true };
     }
     const totalCost = buy * quantity;
     const gross = bmRefPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
-    return { buy, totalCost, gross, taxes, net, roi };
+    return { buy, totalCost, gross, taxes, net, roi, invalid: false };
   };
 
 
-  const cityRows = CITIES.map((city) => {
+  const TRANSPORT_CITIES = CITIES.filter((c) => c !== "Caerleon");
+
+  const cityRows = TRANSPORT_CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
     return { city, row: r };
   });
 
-  // Mejor oportunidad: máximo ROI > 0
+  // Mejor oportunidad: máximo ROI > 0 (excluye datos nulos de la API)
   const bestDeal = useMemo(() => {
     let best: { city: string; roi: number; net: number } | null = null;
     for (const { city, row } of cityRows) {
       if (!row) continue;
       const c = calcRow(row);
-      if (!c.buy || c.roi <= 0) continue;
+      if (c.invalid || !c.buy || c.roi <= 0) continue;
       if (!best || c.roi > best.roi) best = { city, roi: c.roi, net: c.net };
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmRefPrice, quantity, totalTaxRate]);
+  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
@@ -540,9 +545,10 @@ function TransportPage() {
                 <TableBody>
                   {cityRows.map(({ city, row }) => {
                     const c = row ? calcRow(row) : null;
+                    const invalid = c?.invalid ?? false;
                     const roi = c?.roi ?? 0;
                     const tone =
-                      !c || !c.buy
+                      !c || !c.buy || invalid
                         ? "muted"
                         : roi > 15
                           ? "success"
@@ -554,16 +560,17 @@ function TransportPage() {
                       <TableRow
                         key={city}
                         className={cn(
-                          tone === "success" && "bg-success/5 hover:bg-success/10",
-                          tone === "warning" && "bg-warning/5 hover:bg-warning/10",
-                          tone === "danger" && "bg-danger/5 hover:bg-danger/10",
-                          isBest && "ring-1 ring-inset ring-success/50",
+                          invalid && "opacity-60",
+                          tone === "success" && !invalid && "bg-success/5 hover:bg-success/10",
+                          tone === "warning" && !invalid && "bg-warning/5 hover:bg-warning/10",
+                          tone === "danger" && !invalid && "bg-danger/5 hover:bg-danger/10",
+                          isBest && !invalid && "ring-1 ring-inset ring-success/50",
                         )}
                       >
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
                             {city}
-                            {isBest && (
+                            {isBest && !invalid && (
                               <Sparkles className="h-3.5 w-3.5 text-success" />
                             )}
                           </span>
@@ -578,26 +585,32 @@ function TransportPage() {
                         <TableCell className="text-right text-xs text-muted-foreground">
                           {timeAgo(row?.sell_price_min_date)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {c?.buy ? formatSilver(c.totalCost) : "—"}
+                        <TableCell className="text-right text-muted-foreground">
+                          {invalid ? (
+                            <span className="italic">Sin stock/datos</span>
+                          ) : c?.buy ? (
+                            formatSilver(c.totalCost)
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {c?.buy ? formatSilver(c.gross) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.gross) : "—"}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {c?.buy ? formatSilver(c.taxes) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.taxes) : "—"}
                         </TableCell>
                         <TableCell
                           className={cn(
                             "text-right font-semibold",
-                            tone === "success" && "text-success",
-                            tone === "danger" && "text-danger",
+                            tone === "success" && !invalid && "text-success",
+                            tone === "danger" && !invalid && "text-danger",
                           )}
                         >
-                          {c?.buy ? formatSilver(c.net) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.net) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {c?.buy ? (
+                          {!invalid && c?.buy ? (
                             <Badge
                               variant="outline"
                               className={cn(
@@ -611,7 +624,7 @@ function TransportPage() {
                               {roi.toFixed(1)}%
                             </Badge>
                           ) : (
-                            "—"
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>
