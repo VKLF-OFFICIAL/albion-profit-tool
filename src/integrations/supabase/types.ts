@@ -14,32 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
-      favorite_items: {
+      gold_transactions: {
         Row: {
-          base_id: string
+          amount_gold: number
           created_at: string
-          enchant: number
           id: string
-          quality: number
-          tier: number
+          note: string | null
+          occurred_at: string
+          price_silver: number
+          tx_type: string
           user_id: string
         }
         Insert: {
-          base_id: string
+          amount_gold: number
           created_at?: string
-          enchant?: number
           id?: string
-          quality?: number
-          tier: number
+          note?: string | null
+          occurred_at?: string
+          price_silver: number
+          tx_type: string
           user_id: string
         }
         Update: {
-          base_id?: string
+          amount_gold?: number
           created_at?: string
-          enchant?: number
           id?: string
-          quality?: number
-          tier?: number
+          note?: string | null
+          occurred_at?: string
+          price_silver?: number
+          tx_type?: string
           user_id?: string
         }
         Relationships: []
@@ -65,6 +68,42 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      recent_searches: {
+        Row: {
+          base_id: string
+          created_at: string
+          enchant: number
+          id: string
+          last_used_at: string
+          quality: number
+          tier: number
+          tool: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          enchant?: number
+          id?: string
+          last_used_at?: string
+          quality?: number
+          tier?: number
+          tool: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          enchant?: number
+          id?: string
+          last_used_at?: string
+          quality?: number
+          tier?: number
+          tool?: string
+          user_id?: string
         }
         Relationships: []
       }

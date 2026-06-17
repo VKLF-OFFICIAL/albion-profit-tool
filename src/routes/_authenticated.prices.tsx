@@ -10,11 +10,9 @@ import {
   Loader2,
   RefreshCw,
   Search,
-  Star,
   TrendingUp,
 } from "lucide-react";
-import { toast } from "sonner";
-import { useFavorites } from "@/hooks/use-favorites";
+import { recordRecentSearch } from "@/hooks/use-recent-searches";
 
 import { TutorialModal } from "@/components/tutorial-modal";
 import { Button } from "@/components/ui/button";
@@ -126,7 +124,7 @@ function freshness(iso?: string): { label: string; tone: string } {
 
 function PricesPage() {
   const search = Route.useSearch();
-  const favs = useFavorites();
+  
 
   const [baseId, setBaseId] = useState(search.base ?? "BAG");
   const [tier, setTier] = useState(search.tier ?? 4);
@@ -178,6 +176,20 @@ function PricesPage() {
       clearInterval(interval);
     };
   }, [itemId, quality]);
+
+  // Record in recent searches (debounced 1.5s)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void recordRecentSearch({
+        tool: "prices",
+        base_id: baseId,
+        tier,
+        enchant,
+        quality,
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [baseId, tier, enchant, quality]);
 
 
   const filteredItems = useMemo(() => {
@@ -333,34 +345,6 @@ function PricesPage() {
             >
               {itemId}
             </Badge>
-            <button
-              type="button"
-              onClick={async () => {
-                const k = { base_id: baseId, tier, enchant, quality };
-                const wasFav = favs.isFavorite(k);
-                try {
-                  await favs.toggle(k);
-                  toast.success(wasFav ? "Eliminado de favoritos" : "Añadido a favoritos");
-                } catch {
-                  toast.error("No se pudo actualizar favoritos");
-                }
-              }}
-              aria-label={
-                favs.isFavorite({ base_id: baseId, tier, enchant, quality })
-                  ? "Quitar de favoritos"
-                  : "Añadir a favoritos"
-              }
-              className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full border border-primary/40 bg-background/80 text-warning shadow-sm backdrop-blur transition-all hover:scale-110 hover:border-warning hover:bg-warning/10"
-            >
-              <Star
-                className={cn(
-                  "h-4 w-4 transition-all",
-                  favs.isFavorite({ base_id: baseId, tier, enchant, quality })
-                    ? "fill-warning text-warning"
-                    : "text-muted-foreground",
-                )}
-              />
-            </button>
           </div>
 
           <CardContent className="flex-1 pt-6">
