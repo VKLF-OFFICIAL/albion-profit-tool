@@ -108,13 +108,28 @@ function useDebounced<T>(value: T, delay = 500): T {
 }
 
 function TransportPage() {
-  const [baseId, setBaseId] = useState<string>("BAG");
-  const [tier, setTier] = useState<number>(4);
-  const [enchant, setEnchant] = useState<number>(0);
-  const [quality, setQuality] = useState<number>(1);
+  const search = Route.useSearch();
+  const [baseId, setBaseId] = useState<string>(search.base ?? "BAG");
+  const [tier, setTier] = useState<number>(search.tier ?? 4);
+  const [enchant, setEnchant] = useState<number>(search.enchant ?? 0);
+  const [quality, setQuality] = useState<number>(search.quality ?? 1);
   const [quantity, setQuantity] = useState<number>(100);
   const [premium, setPremium] = useState<boolean>(true);
   const [sellMode, setSellMode] = useState<SellMode>("instasell");
+
+  useEffect(() => {
+    if (search.base !== undefined) setBaseId(search.base);
+    if (search.tier !== undefined) setTier(search.tier);
+    if (search.enchant !== undefined) setEnchant(search.enchant);
+    if (search.quality !== undefined) setQuality(search.quality);
+  }, [search.base, search.tier, search.enchant, search.quality]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void recordRecentSearch({ tool: "transport", base_id: baseId, tier, enchant, quality });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [baseId, tier, enchant, quality]);
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
