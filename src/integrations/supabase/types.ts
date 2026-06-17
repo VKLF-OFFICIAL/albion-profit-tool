@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      favorite_items: {
+        Row: {
+          base_id: string
+          created_at: string
+          enchant: number
+          id: string
+          quality: number
+          tier: number
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          enchant?: number
+          id?: string
+          quality?: number
+          tier: number
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          enchant?: number
+          id?: string
+          quality?: number
+          tier?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

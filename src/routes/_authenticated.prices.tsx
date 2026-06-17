@@ -10,8 +10,11 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Star,
   TrendingUp,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useFavorites } from "@/hooks/use-favorites";
 
 import { TutorialModal } from "@/components/tutorial-modal";
 import { Button } from "@/components/ui/button";
@@ -66,6 +69,12 @@ import {
 } from "@/lib/albion-api";
 
 export const Route = createFileRoute("/_authenticated/prices")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    base: typeof search.base === "string" ? search.base : undefined,
+    tier: search.tier != null ? Number(search.tier) : undefined,
+    enchant: search.enchant != null ? Number(search.enchant) : undefined,
+    quality: search.quality != null ? Number(search.quality) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Comparador de Precios · Albion M&C" },
@@ -78,7 +87,6 @@ export const Route = createFileRoute("/_authenticated/prices")({
   }),
   component: PricesPage,
 });
-
 const TIERS = [4, 5, 6, 7, 8];
 const ENCHANTS = [0, 1, 2, 3, 4];
 const CATEGORIES: ("all" | AlbionCategory)[] = [
@@ -116,10 +124,21 @@ function freshness(iso?: string): { label: string; tone: string } {
 }
 
 function PricesPage() {
-  const [baseId, setBaseId] = useState("BAG");
-  const [tier, setTier] = useState(4);
-  const [enchant, setEnchant] = useState(0);
-  const [quality, setQuality] = useState(1);
+  const search = Route.useSearch();
+  const favs = useFavorites();
+
+  const [baseId, setBaseId] = useState(search.base ?? "BAG");
+  const [tier, setTier] = useState(search.tier ?? 4);
+  const [enchant, setEnchant] = useState(search.enchant ?? 0);
+  const [quality, setQuality] = useState(search.quality ?? 1);
+
+  // Sync state when search params change (e.g. clicking a favorite card)
+  useEffect(() => {
+    if (search.base !== undefined) setBaseId(search.base);
+    if (search.tier !== undefined) setTier(search.tier);
+    if (search.enchant !== undefined) setEnchant(search.enchant);
+    if (search.quality !== undefined) setQuality(search.quality);
+  }, [search.base, search.tier, search.enchant, search.quality]);
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -305,6 +324,34 @@ function PricesPage() {
             >
               {itemId}
             </Badge>
+            <button
+              type="button"
+              onClick={async () => {
+                const k = { base_id: baseId, tier, enchant, quality };
+                const wasFav = favs.isFavorite(k);
+                try {
+                  await favs.toggle(k);
+                  toast.success(wasFav ? "Eliminado de favoritos" : "Añadido a favoritos");
+                } catch {
+                  toast.error("No se pudo actualizar favoritos");
+                }
+              }}
+              aria-label={
+                favs.isFavorite({ base_id: baseId, tier, enchant, quality })
+                  ? "Quitar de favoritos"
+                  : "Añadir a favoritos"
+              }
+              className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full border border-primary/40 bg-background/80 text-warning shadow-sm backdrop-blur transition-all hover:scale-110 hover:border-warning hover:bg-warning/10"
+            >
+              <Star
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  favs.isFavorite({ base_id: baseId, tier, enchant, quality })
+                    ? "fill-warning text-warning"
+                    : "text-muted-foreground",
+                )}
+              />
+            </button>
           </div>
 
           <CardContent className="flex-1 pt-6">
