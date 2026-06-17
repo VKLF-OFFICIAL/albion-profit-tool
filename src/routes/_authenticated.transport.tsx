@@ -154,42 +154,50 @@ function TransportPage() {
   const setupFee = sellMode === "sellorder" ? 0.025 : 0;
   const totalTaxRate = salesTax + setupFee;
 
-  const calcRow = (r: PriceRow) => {
+  const calcRow = (r: PriceRow, originIsBM = false) => {
     const buy = r.sell_price_min;
+    // Si el origen es el propio Mercado Negro, no hay setup fee porque sólo
+    // se rellena una orden de compra (instasell). En sellorder mantenemos
+    // únicamente el impuesto de venta (sin setup fee), ya que publicar y
+    // vender en el mismo mercado no tiene sentido económico con doble fee.
+    const taxRate = originIsBM ? salesTax : totalTaxRate;
     if (!buy || !bmRefPrice) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: false };
-    }
-    if (buy >= 999999) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: true };
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
     const gross = bmRefPrice * quantity;
-    const taxes = gross * totalTaxRate;
+    const taxes = gross * taxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
-    return { buy, totalCost, gross, taxes, net, roi, invalid: false };
+    return { buy, totalCost, gross, taxes, net, roi };
   };
 
 
-  const TRANSPORT_CITIES = CITIES.filter((c) => c !== "Caerleon");
+  // Orígenes: las 5 ciudades reales (excluyendo Caerleon) + el propio
+  // Mercado Negro como "ciudad" extra, con su propia configuración fiscal
+  // (sin setup fee, sólo impuesto de venta).
+  const TRANSPORT_CITIES = [
+    ...CITIES.filter((c) => c !== "Caerleon"),
+    BLACK_MARKET,
+  ];
 
   const cityRows = TRANSPORT_CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
-    return { city, row: r };
+    return { city, row: r, isBM: city === BLACK_MARKET };
   });
 
-  // Mejor oportunidad: máximo ROI > 0 (excluye datos nulos de la API)
+  // Mejor oportunidad: máximo ROI > 0
   const bestDeal = useMemo(() => {
     let best: { city: string; roi: number; net: number } | null = null;
-    for (const { city, row } of cityRows) {
+    for (const { city, row, isBM } of cityRows) {
       if (!row) continue;
-      const c = calcRow(row);
-      if (c.invalid || !c.buy || c.roi <= 0) continue;
+      const c = calcRow(row, isBM);
+      if (!c.buy || c.roi <= 0) continue;
       if (!best || c.roi > best.roi) best = { city, roi: c.roi, net: c.net };
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate]);
+  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate, salesTax]);
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
@@ -543,12 +551,11 @@ function TransportPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cityRows.map(({ city, row }) => {
-                    const c = row ? calcRow(row) : null;
-                    const invalid = c?.invalid ?? false;
+                  {cityRows.map(({ city, row, isBM }) => {
+                    const c = row ? calcRow(row, isBM) : null;
                     const roi = c?.roi ?? 0;
                     const tone =
-                      !c || !c.buy || invalid
+                      !c || !c.buy
                         ? "muted"
                         : roi > 15
                           ? "success"
@@ -560,17 +567,24 @@ function TransportPage() {
                       <TableRow
                         key={city}
                         className={cn(
-                          invalid && "opacity-60",
-                          tone === "success" && !invalid && "bg-success/5 hover:bg-success/10",
-                          tone === "warning" && !invalid && "bg-warning/5 hover:bg-warning/10",
-                          tone === "danger" && !invalid && "bg-danger/5 hover:bg-danger/10",
-                          isBest && !invalid && "ring-1 ring-inset ring-success/50",
+                          tone === "success" && "bg-success/5 hover:bg-success/10",
+                          tone === "warning" && "bg-warning/5 hover:bg-warning/10",
+                          tone === "danger" && "bg-danger/5 hover:bg-danger/10",
+                          isBest && "ring-1 ring-inset ring-success/50",
                         )}
                       >
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
                             {city}
-                            {isBest && !invalid && (
+                            {isBM && (
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 text-[10px] text-primary"
+                              >
+                                BM
+                              </Badge>
+                            )}
+                            {isBest && (
                               <Sparkles className="h-3.5 w-3.5 text-success" />
                             )}
                           </span>
@@ -586,31 +600,25 @@ function TransportPage() {
                           {timeAgo(row?.sell_price_min_date)}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {invalid ? (
-                            <span className="italic">Sin stock/datos</span>
-                          ) : c?.buy ? (
-                            formatSilver(c.totalCost)
-                          ) : (
-                            "—"
-                          )}
+                          {c?.buy ? formatSilver(c.totalCost) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!invalid && c?.buy ? formatSilver(c.gross) : "—"}
+                          {c?.buy ? formatSilver(c.gross) : "—"}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {!invalid && c?.buy ? formatSilver(c.taxes) : "—"}
+                          {c?.buy ? formatSilver(c.taxes) : "—"}
                         </TableCell>
                         <TableCell
                           className={cn(
                             "text-right font-semibold",
-                            tone === "success" && !invalid && "text-success",
-                            tone === "danger" && !invalid && "text-danger",
+                            tone === "success" && "text-success",
+                            tone === "danger" && "text-danger",
                           )}
                         >
-                          {!invalid && c?.buy ? formatSilver(c.net) : "—"}
+                          {c?.buy ? formatSilver(c.net) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!invalid && c?.buy ? (
+                          {c?.buy ? (
                             <Badge
                               variant="outline"
                               className={cn(
