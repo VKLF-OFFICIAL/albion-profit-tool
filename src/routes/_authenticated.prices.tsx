@@ -124,10 +124,22 @@ function freshness(iso?: string): { label: string; tone: string } {
 }
 
 function PricesPage() {
-  const [baseId, setBaseId] = useState("BAG");
-  const [tier, setTier] = useState(4);
-  const [enchant, setEnchant] = useState(0);
-  const [quality, setQuality] = useState(1);
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/prices" });
+  const favs = useFavorites();
+
+  const [baseId, setBaseId] = useState(search.base ?? "BAG");
+  const [tier, setTier] = useState(search.tier ?? 4);
+  const [enchant, setEnchant] = useState(search.enchant ?? 0);
+  const [quality, setQuality] = useState(search.quality ?? 1);
+
+  // Sync state when search params change (e.g. clicking a favorite card)
+  useEffect(() => {
+    if (search.base !== undefined) setBaseId(search.base);
+    if (search.tier !== undefined) setTier(search.tier);
+    if (search.enchant !== undefined) setEnchant(search.enchant);
+    if (search.quality !== undefined) setQuality(search.quality);
+  }, [search.base, search.tier, search.enchant, search.quality]);
 
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
