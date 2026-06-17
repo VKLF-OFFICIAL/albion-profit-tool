@@ -115,7 +115,7 @@ function useDebounced<T>(value: T, delay = 400): T {
 }
 
 function freshness(iso?: string): { label: string; tone: string } {
-  if (!iso) return { label: "Sin datos", tone: "text-muted-foreground" };
+  if (!isValidApiDate(iso)) return { label: "Sin datos", tone: "text-muted-foreground" };
   const ms = Date.now() - new Date(iso + "Z").getTime();
   const h = ms / 3_600_000;
   if (h < 2) return { label: timeAgo(iso), tone: "text-success" };
