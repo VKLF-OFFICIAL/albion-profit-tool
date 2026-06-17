@@ -63,6 +63,12 @@ import { fetchPrices, formatSilver, timeAgo, type PriceRow } from "@/lib/albion-
 import { recordRecentSearch } from "@/hooks/use-recent-searches";
 
 export const Route = createFileRoute("/_authenticated/transport")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    base: typeof search.base === "string" ? search.base : undefined,
+    tier: search.tier != null ? Number(search.tier) : undefined,
+    enchant: search.enchant != null ? Number(search.enchant) : undefined,
+    quality: search.quality != null ? Number(search.quality) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Calculadora de Transportes · Albion M&C" },
