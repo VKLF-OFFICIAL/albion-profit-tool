@@ -75,6 +75,11 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Favoritos */}
+      <FavoritesPanel />
+
+
+
       {/* Hero character */}
       <div className="flex justify-center">
         <div className="relative">
