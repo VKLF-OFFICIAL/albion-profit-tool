@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
-import { FavoritesPanel } from "@/components/favorites-panel";
+import { RecentSearchesPanel } from "@/components/recent-searches-panel";
 import heroAdventurer from "@/assets/hero-adventurer.png";
 import iconPrices from "@/assets/icon-prices.png";
 import iconRefining from "@/assets/icon-refining.png";
