@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownCircle,
@@ -10,8 +10,11 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Star,
   TrendingUp,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useFavorites } from "@/hooks/use-favorites";
 
 import { TutorialModal } from "@/components/tutorial-modal";
 import { Button } from "@/components/ui/button";
