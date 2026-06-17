@@ -69,6 +69,12 @@ import {
 } from "@/lib/albion-api";
 
 export const Route = createFileRoute("/_authenticated/prices")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    base: typeof search.base === "string" ? search.base : undefined,
+    tier: search.tier != null ? Number(search.tier) : undefined,
+    enchant: search.enchant != null ? Number(search.enchant) : undefined,
+    quality: search.quality != null ? Number(search.quality) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Comparador de Precios · Albion M&C" },
@@ -81,8 +87,6 @@ export const Route = createFileRoute("/_authenticated/prices")({
   }),
   component: PricesPage,
 });
-
-const TIERS = [4, 5, 6, 7, 8];
 const ENCHANTS = [0, 1, 2, 3, 4];
 const CATEGORIES: ("all" | AlbionCategory)[] = [
   "all",
