@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { PasswordStrength } from "@/components/password-strength";
+import { isPasswordStrong } from "@/lib/password";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Perfil · Albion M&C" }] }),
@@ -137,7 +139,9 @@ function ProfilePage() {
   }
 
   async function changePassword() {
-    if (newPassword.length < 6) return toast.error("Mínimo 6 caracteres");
+    if (!isPasswordStrong(newPassword)) {
+      return toast.error("La contraseña no cumple los requisitos de seguridad.");
+    }
     if (newPassword !== confirmPassword) return toast.error("Las contraseñas no coinciden");
     setChangingPwd(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -218,18 +222,26 @@ function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Cambiar contraseña</CardTitle>
-          <CardDescription>Usa una contraseña segura de al menos 6 caracteres.</CardDescription>
+          <CardDescription>
+            Usa una contraseña fuerte: 8+ caracteres, mayúscula, minúscula, número y carácter especial.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-pwd">Nueva contraseña</Label>
             <Input id="new-pwd" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            {newPassword.length > 0 && <PasswordStrength value={newPassword} />}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-pwd">Confirmar contraseña</Label>
             <Input id="confirm-pwd" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           </div>
-          <Button onClick={changePassword} disabled={changingPwd} variant="secondary" className="w-full sm:w-auto">
+          <Button
+            onClick={changePassword}
+            disabled={changingPwd || !isPasswordStrong(newPassword) || newPassword !== confirmPassword}
+            variant="secondary"
+            className="w-full sm:w-auto"
+          >
             {changingPwd ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
             Actualizar contraseña
           </Button>
