@@ -177,6 +177,20 @@ function PricesPage() {
     };
   }, [itemId, quality]);
 
+  // Record in recent searches (debounced 1.5s)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void recordRecentSearch({
+        tool: "prices",
+        base_id: baseId,
+        tier,
+        enchant,
+        quality,
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [baseId, tier, enchant, quality]);
+
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
