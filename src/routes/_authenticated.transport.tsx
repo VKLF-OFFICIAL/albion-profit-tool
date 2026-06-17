@@ -186,18 +186,18 @@ function TransportPage() {
     return { city, row: r, isBM: city === BLACK_MARKET };
   });
 
-  // Mejor oportunidad: máximo ROI > 0 (excluye datos nulos de la API)
+  // Mejor oportunidad: máximo ROI > 0
   const bestDeal = useMemo(() => {
     let best: { city: string; roi: number; net: number } | null = null;
-    for (const { city, row } of cityRows) {
+    for (const { city, row, isBM } of cityRows) {
       if (!row) continue;
-      const c = calcRow(row);
-      if (c.invalid || !c.buy || c.roi <= 0) continue;
+      const c = calcRow(row, isBM);
+      if (!c.buy || c.roi <= 0) continue;
       if (!best || c.roi > best.roi) best = { city, roi: c.roi, net: c.net };
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate]);
+  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate, salesTax]);
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
