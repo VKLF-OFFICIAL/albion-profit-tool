@@ -60,6 +60,7 @@ import {
   type AlbionCategory,
 } from "@/lib/albion-items";
 import { fetchPrices, formatSilver, timeAgo, type PriceRow } from "@/lib/albion-api";
+import { recordRecentSearch } from "@/hooks/use-recent-searches";
 
 export const Route = createFileRoute("/_authenticated/transport")({
   head: () => ({
