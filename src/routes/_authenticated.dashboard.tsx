@@ -75,8 +75,8 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* Favoritos */}
-      <FavoritesPanel />
+      {/* Últimas búsquedas */}
+      <RecentSearchesPanel />
 
 
 
