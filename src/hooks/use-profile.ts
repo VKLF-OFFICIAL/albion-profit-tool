@@ -62,9 +62,13 @@ export function useProfile(): ProfileInfo {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") load();
     });
 
+    const onProfileUpdated = () => load();
+    window.addEventListener("profile:updated", onProfileUpdated);
+
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
+      window.removeEventListener("profile:updated", onProfileUpdated);
     };
   }, []);
 

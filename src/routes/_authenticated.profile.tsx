@@ -70,40 +70,70 @@ function ProfilePage() {
       .upsert({ id: userId, username: username.trim(), avatar_url: avatarPath }, { onConflict: "id" });
     setSaving(false);
     if (error) return toast.error(error.message);
+    window.dispatchEvent(new Event("profile:updated"));
     toast.success("Perfil actualizado");
+  }
+
+  async function downscaleImage(file: File, maxSize = 512): Promise<Blob> {
+    const dataUrl: string = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const img: HTMLImageElement = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = dataUrl;
+    });
+    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, w, h);
+    return await new Promise<Blob>((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/jpeg", 0.9),
+    );
   }
 
   async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return toast.error("Máx 2 MB");
+    if (!file.type.startsWith("image/")) return toast.error("Selecciona una imagen");
+    if (file.size > 10 * 1024 * 1024) return toast.error("Máx 10 MB");
     setUploading(true);
-    const ext = file.name.split(".").pop() ?? "png";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
-      upsert: true,
-      contentType: file.type,
-    });
-    if (upErr) {
+    try {
+      const blob = await downscaleImage(file, 512);
+      const path = `${userId}/avatar-${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, {
+        upsert: true,
+        contentType: "image/jpeg",
+      });
+      if (upErr) throw upErr;
+      if (avatarPath && !avatarPath.startsWith("http")) {
+        await supabase.storage.from("avatars").remove([avatarPath]);
+      }
+      const { error: updErr } = await supabase
+        .from("profiles")
+        .upsert(
+          { id: userId, username: username.trim() || email.split("@")[0], avatar_url: path },
+          { onConflict: "id" },
+        );
+      if (updErr) throw updErr;
+      setAvatarPath(path);
+      setAvatarUrl(await resolveAvatarUrl(path));
+      window.dispatchEvent(new Event("profile:updated"));
+      toast.success("Foto actualizada");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Error al subir la imagen");
+    } finally {
       setUploading(false);
-      return toast.error(upErr.message);
     }
-    // delete old
-    if (avatarPath && !avatarPath.startsWith("http")) {
-      await supabase.storage.from("avatars").remove([avatarPath]);
-    }
-    const { error: updErr } = await supabase
-      .from("profiles")
-      .upsert({ id: userId, username: username.trim() || email.split("@")[0], avatar_url: path }, { onConflict: "id" });
-    if (updErr) {
-      setUploading(false);
-      return toast.error(updErr.message);
-    }
-    setAvatarPath(path);
-    setAvatarUrl(await resolveAvatarUrl(path));
-    setUploading(false);
-    toast.success("Foto actualizada");
   }
 
   async function changePassword() {
@@ -167,7 +197,7 @@ function ProfilePage() {
             </div>
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground">{email}</p>
-              <p>JPG o PNG, máx 2 MB</p>
+              <p>JPG, PNG o WebP · máx 10 MB (se redimensiona automáticamente)</p>
             </div>
           </div>
 
