@@ -171,7 +171,9 @@ function TransportPage() {
   };
 
 
-  const cityRows = CITIES.map((city) => {
+  const TRANSPORT_CITIES = CITIES.filter((c) => c !== "Caerleon");
+
+  const cityRows = TRANSPORT_CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
     return { city, row: r };
   });
