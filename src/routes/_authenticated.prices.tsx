@@ -64,6 +64,7 @@ import {
 import {
   fetchPrices,
   formatSilver,
+  isValidApiDate,
   timeAgo,
   type PriceRow,
 } from "@/lib/albion-api";
