@@ -22,20 +22,20 @@ interface Section {
 
 const sections: Section[] = [
   {
-    to: "/transport",
-    title: "Comparador de precios",
+    to: "/prices",
+    title: "Comparador de Precios",
     description:
       "Compara precios entre mercados, optimiza ganancias y consigue plata extra.",
     icon: iconPrices,
   },
   {
     to: "/refining",
-    title: "Calculadora refinamiento",
+    title: "Asistente de Refino",
     description: "Calcula el profit de refinar recursos con o sin foco.",
     icon: iconRefining,
   },
   {
-    to: "/refining",
+    to: "/crafting",
     title: "Crafteo",
     description:
       "Calcula recursos, artefactos y ganancia neta al craftear armas, armaduras y armas secundarias.",
@@ -43,14 +43,14 @@ const sections: Section[] = [
   },
   {
     to: "/transport",
-    title: "Profit de Transporte",
+    title: "Calculadora de Transportes",
     description:
       "Encuentra las mejores rutas ciudad → Mercado Negro y maximiza tu ROI.",
     icon: iconTransport,
   },
   {
     to: "/gold",
-    title: "Inversión en Oro",
+    title: "Oro & Cartera",
     description:
       "Registra tus compras y ventas, visualiza el historial y descubre cuándo es rentable operar.",
     icon: iconGold,
