@@ -125,7 +125,6 @@ function freshness(iso?: string): { label: string; tone: string } {
 
 function PricesPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/prices" });
   const favs = useFavorites();
 
   const [baseId, setBaseId] = useState(search.base ?? "BAG");
