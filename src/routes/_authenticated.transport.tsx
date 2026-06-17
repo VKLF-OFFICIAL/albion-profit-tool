@@ -545,9 +545,10 @@ function TransportPage() {
                 <TableBody>
                   {cityRows.map(({ city, row }) => {
                     const c = row ? calcRow(row) : null;
+                    const invalid = c?.invalid ?? false;
                     const roi = c?.roi ?? 0;
                     const tone =
-                      !c || !c.buy
+                      !c || !c.buy || invalid
                         ? "muted"
                         : roi > 15
                           ? "success"
@@ -559,16 +560,17 @@ function TransportPage() {
                       <TableRow
                         key={city}
                         className={cn(
-                          tone === "success" && "bg-success/5 hover:bg-success/10",
-                          tone === "warning" && "bg-warning/5 hover:bg-warning/10",
-                          tone === "danger" && "bg-danger/5 hover:bg-danger/10",
-                          isBest && "ring-1 ring-inset ring-success/50",
+                          invalid && "opacity-60",
+                          tone === "success" && !invalid && "bg-success/5 hover:bg-success/10",
+                          tone === "warning" && !invalid && "bg-warning/5 hover:bg-warning/10",
+                          tone === "danger" && !invalid && "bg-danger/5 hover:bg-danger/10",
+                          isBest && !invalid && "ring-1 ring-inset ring-success/50",
                         )}
                       >
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
                             {city}
-                            {isBest && (
+                            {isBest && !invalid && (
                               <Sparkles className="h-3.5 w-3.5 text-success" />
                             )}
                           </span>
@@ -583,26 +585,32 @@ function TransportPage() {
                         <TableCell className="text-right text-xs text-muted-foreground">
                           {timeAgo(row?.sell_price_min_date)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {c?.buy ? formatSilver(c.totalCost) : "—"}
+                        <TableCell className="text-right text-muted-foreground">
+                          {invalid ? (
+                            <span className="italic">Sin stock/datos</span>
+                          ) : c?.buy ? (
+                            formatSilver(c.totalCost)
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {c?.buy ? formatSilver(c.gross) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.gross) : "—"}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {c?.buy ? formatSilver(c.taxes) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.taxes) : "—"}
                         </TableCell>
                         <TableCell
                           className={cn(
                             "text-right font-semibold",
-                            tone === "success" && "text-success",
-                            tone === "danger" && "text-danger",
+                            tone === "success" && !invalid && "text-success",
+                            tone === "danger" && !invalid && "text-danger",
                           )}
                         >
-                          {c?.buy ? formatSilver(c.net) : "—"}
+                          {!invalid && c?.buy ? formatSilver(c.net) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {c?.buy ? (
+                          {!invalid && c?.buy ? (
                             <Badge
                               variant="outline"
                               className={cn(
@@ -616,7 +624,7 @@ function TransportPage() {
                               {roi.toFixed(1)}%
                             </Badge>
                           ) : (
-                            "—"
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>
