@@ -551,12 +551,11 @@ function TransportPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cityRows.map(({ city, row }) => {
-                    const c = row ? calcRow(row) : null;
-                    const invalid = c?.invalid ?? false;
+                  {cityRows.map(({ city, row, isBM }) => {
+                    const c = row ? calcRow(row, isBM) : null;
                     const roi = c?.roi ?? 0;
                     const tone =
-                      !c || !c.buy || invalid
+                      !c || !c.buy
                         ? "muted"
                         : roi > 15
                           ? "success"
@@ -568,17 +567,24 @@ function TransportPage() {
                       <TableRow
                         key={city}
                         className={cn(
-                          invalid && "opacity-60",
-                          tone === "success" && !invalid && "bg-success/5 hover:bg-success/10",
-                          tone === "warning" && !invalid && "bg-warning/5 hover:bg-warning/10",
-                          tone === "danger" && !invalid && "bg-danger/5 hover:bg-danger/10",
-                          isBest && !invalid && "ring-1 ring-inset ring-success/50",
+                          tone === "success" && "bg-success/5 hover:bg-success/10",
+                          tone === "warning" && "bg-warning/5 hover:bg-warning/10",
+                          tone === "danger" && "bg-danger/5 hover:bg-danger/10",
+                          isBest && "ring-1 ring-inset ring-success/50",
                         )}
                       >
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
                             {city}
-                            {isBest && !invalid && (
+                            {isBM && (
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 text-[10px] text-primary"
+                              >
+                                BM
+                              </Badge>
+                            )}
+                            {isBest && (
                               <Sparkles className="h-3.5 w-3.5 text-success" />
                             )}
                           </span>
@@ -594,31 +600,25 @@ function TransportPage() {
                           {timeAgo(row?.sell_price_min_date)}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {invalid ? (
-                            <span className="italic">Sin stock/datos</span>
-                          ) : c?.buy ? (
-                            formatSilver(c.totalCost)
-                          ) : (
-                            "—"
-                          )}
+                          {c?.buy ? formatSilver(c.totalCost) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!invalid && c?.buy ? formatSilver(c.gross) : "—"}
+                          {c?.buy ? formatSilver(c.gross) : "—"}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {!invalid && c?.buy ? formatSilver(c.taxes) : "—"}
+                          {c?.buy ? formatSilver(c.taxes) : "—"}
                         </TableCell>
                         <TableCell
                           className={cn(
                             "text-right font-semibold",
-                            tone === "success" && !invalid && "text-success",
-                            tone === "danger" && !invalid && "text-danger",
+                            tone === "success" && "text-success",
+                            tone === "danger" && "text-danger",
                           )}
                         >
-                          {!invalid && c?.buy ? formatSilver(c.net) : "—"}
+                          {c?.buy ? formatSilver(c.net) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!invalid && c?.buy ? (
+                          {c?.buy ? (
                             <Badge
                               variant="outline"
                               className={cn(
