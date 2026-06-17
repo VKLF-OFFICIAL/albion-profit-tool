@@ -139,7 +139,9 @@ function ProfilePage() {
   }
 
   async function changePassword() {
-    if (newPassword.length < 6) return toast.error("Mínimo 6 caracteres");
+    if (!isPasswordStrong(newPassword)) {
+      return toast.error("La contraseña no cumple los requisitos de seguridad.");
+    }
     if (newPassword !== confirmPassword) return toast.error("Las contraseñas no coinciden");
     setChangingPwd(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
