@@ -75,11 +75,6 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* Últimas búsquedas */}
-      <RecentSearchesPanel />
-
-
-
       {/* Hero character */}
       <div className="flex justify-center">
         <div className="relative">
