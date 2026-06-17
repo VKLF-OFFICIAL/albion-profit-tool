@@ -10,11 +10,9 @@ import {
   Loader2,
   RefreshCw,
   Search,
-  Star,
   TrendingUp,
 } from "lucide-react";
-import { toast } from "sonner";
-import { useFavorites } from "@/hooks/use-favorites";
+import { recordRecentSearch } from "@/hooks/use-recent-searches";
 
 import { TutorialModal } from "@/components/tutorial-modal";
 import { Button } from "@/components/ui/button";
