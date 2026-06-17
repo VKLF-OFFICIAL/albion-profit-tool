@@ -64,6 +64,7 @@ import {
 import {
   fetchPrices,
   formatSilver,
+  isValidApiDate,
   timeAgo,
   type PriceRow,
 } from "@/lib/albion-api";
@@ -115,7 +116,7 @@ function useDebounced<T>(value: T, delay = 400): T {
 }
 
 function freshness(iso?: string): { label: string; tone: string } {
-  if (!iso) return { label: "Sin datos", tone: "text-muted-foreground" };
+  if (!isValidApiDate(iso)) return { label: "Sin datos", tone: "text-muted-foreground" };
   const ms = Date.now() - new Date(iso + "Z").getTime();
   const h = ms / 3_600_000;
   if (h < 2) return { label: timeAgo(iso), tone: "text-success" };
@@ -163,17 +164,21 @@ function PricesPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const t = setTimeout(() => {
+    const doFetch = () =>
       fetchPrices(itemId, quality)
         .then((data) => !cancelled && setRows(data))
         .catch((e: Error) => !cancelled && setError(e.message))
         .finally(() => !cancelled && setLoading(false));
-    }, 350);
+    const t = setTimeout(doFetch, 350);
+    // auto-refresh cada 60s para combatir datos obsoletos
+    const interval = setInterval(doFetch, 60_000);
     return () => {
       cancelled = true;
       clearTimeout(t);
+      clearInterval(interval);
     };
   }, [itemId, quality]);
+
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
@@ -188,19 +193,23 @@ function PricesPage() {
     }).slice(0, 200);
   }, [debouncedQuery, categoryFilter]);
 
-  // Normaliza filas por ubicación
+  // Normaliza filas por ubicación. Si la API devuelve precio 0 o fecha placeholder,
+  // tratamos esa parte como "sin datos" para no contaminar la tabla.
   const byLocation = useMemo(() => {
     return ALL_LOCATIONS.map((loc) => {
       const r = rows.find((x) => x.city === loc);
+      const sellOk = (r?.sell_price_min ?? 0) > 0 && isValidApiDate(r?.sell_price_min_date);
+      const buyOk = (r?.buy_price_max ?? 0) > 0 && isValidApiDate(r?.buy_price_max_date);
       return {
         city: loc,
-        sell: r?.sell_price_min ?? 0,
-        sellDate: r?.sell_price_min_date,
-        buy: r?.buy_price_max ?? 0,
-        buyDate: r?.buy_price_max_date,
+        sell: sellOk ? r!.sell_price_min : 0,
+        sellDate: sellOk ? r!.sell_price_min_date : undefined,
+        buy: buyOk ? r!.buy_price_max : 0,
+        buyDate: buyOk ? r!.buy_price_max_date : undefined,
       };
     });
   }, [rows]);
+
 
   // Mejor sitio para COMPRAR = sell_price_min más bajo (> 0)
   const bestBuy = useMemo(() => {

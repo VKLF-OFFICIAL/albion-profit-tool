@@ -37,9 +37,18 @@ export async function fetchGoldPrices(count = 30): Promise<GoldPricePoint[]> {
   return (await res.json()) as GoldPricePoint[];
 }
 
+/** Devuelve true si el timestamp de la API es un placeholder (0001-01-01...). */
+export function isValidApiDate(iso: string | undefined): iso is string {
+  if (!iso) return false;
+  const t = new Date(iso + "Z").getTime();
+  if (!isFinite(t)) return false;
+  // Anything before 2010 is API "no data" sentinel (0001-01-01T00:00:00)
+  return t > 1262304000000;
+}
+
 /** Edad legible "hace Xm". */
 export function timeAgo(iso: string | undefined): string {
-  if (!iso) return "—";
+  if (!isValidApiDate(iso)) return "—";
   const ms = Date.now() - new Date(iso + "Z").getTime();
   if (!isFinite(ms) || ms < 0) return "—";
   const m = Math.floor(ms / 60000);
