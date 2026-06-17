@@ -193,19 +193,23 @@ function PricesPage() {
     }).slice(0, 200);
   }, [debouncedQuery, categoryFilter]);
 
-  // Normaliza filas por ubicación
+  // Normaliza filas por ubicación. Si la API devuelve precio 0 o fecha placeholder,
+  // tratamos esa parte como "sin datos" para no contaminar la tabla.
   const byLocation = useMemo(() => {
     return ALL_LOCATIONS.map((loc) => {
       const r = rows.find((x) => x.city === loc);
+      const sellOk = (r?.sell_price_min ?? 0) > 0 && isValidApiDate(r?.sell_price_min_date);
+      const buyOk = (r?.buy_price_max ?? 0) > 0 && isValidApiDate(r?.buy_price_max_date);
       return {
         city: loc,
-        sell: r?.sell_price_min ?? 0,
-        sellDate: r?.sell_price_min_date,
-        buy: r?.buy_price_max ?? 0,
-        buyDate: r?.buy_price_max_date,
+        sell: sellOk ? r!.sell_price_min : 0,
+        sellDate: sellOk ? r!.sell_price_min_date : undefined,
+        buy: buyOk ? r!.buy_price_max : 0,
+        buyDate: buyOk ? r!.buy_price_max_date : undefined,
       };
     });
   }, [rows]);
+
 
   // Mejor sitio para COMPRAR = sell_price_min más bajo (> 0)
   const bestBuy = useMemo(() => {
