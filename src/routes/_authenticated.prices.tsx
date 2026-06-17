@@ -164,17 +164,21 @@ function PricesPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const t = setTimeout(() => {
+    const doFetch = () =>
       fetchPrices(itemId, quality)
         .then((data) => !cancelled && setRows(data))
         .catch((e: Error) => !cancelled && setError(e.message))
         .finally(() => !cancelled && setLoading(false));
-    }, 350);
+    const t = setTimeout(doFetch, 350);
+    // auto-refresh cada 60s para combatir datos obsoletos
+    const interval = setInterval(doFetch, 60_000);
     return () => {
       cancelled = true;
       clearTimeout(t);
+      clearInterval(interval);
     };
   }, [itemId, quality]);
+
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
