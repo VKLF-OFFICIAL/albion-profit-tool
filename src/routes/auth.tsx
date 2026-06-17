@@ -51,14 +51,29 @@ function AuthPage() {
       return toast.error("La contraseña no cumple los requisitos de seguridad.");
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/dashboard` },
     });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+    // Verificación de email desactivada → entramos directos.
+    if (data.session) {
+      toast.success("Cuenta creada. ¡Bienvenido!");
+      navigate({ to: "/dashboard", replace: true });
+      return;
+    }
+    // Fallback: por si la sesión no viene en la respuesta, hacemos login.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Cuenta creada. Ya puedes iniciar sesión.");
+    if (signInErr) {
+      return toast.error("Cuenta creada. Inicia sesión para continuar.");
+    }
+    toast.success("Cuenta creada. ¡Bienvenido!");
+    navigate({ to: "/dashboard", replace: true });
   }
 
   return (
