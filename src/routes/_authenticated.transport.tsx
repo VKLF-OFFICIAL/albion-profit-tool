@@ -157,14 +157,17 @@ function TransportPage() {
   const calcRow = (r: PriceRow) => {
     const buy = r.sell_price_min;
     if (!buy || !bmRefPrice) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: false };
+    }
+    if (buy >= 999999) {
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: true };
     }
     const totalCost = buy * quantity;
     const gross = bmRefPrice * quantity;
     const taxes = gross * totalTaxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
-    return { buy, totalCost, gross, taxes, net, roi };
+    return { buy, totalCost, gross, taxes, net, roi, invalid: false };
   };
 
 
