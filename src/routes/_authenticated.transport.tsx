@@ -178,18 +178,18 @@ function TransportPage() {
     return { city, row: r };
   });
 
-  // Mejor oportunidad: máximo ROI > 0
+  // Mejor oportunidad: máximo ROI > 0 (excluye datos nulos de la API)
   const bestDeal = useMemo(() => {
     let best: { city: string; roi: number; net: number } | null = null;
     for (const { city, row } of cityRows) {
       if (!row) continue;
       const c = calcRow(row);
-      if (!c.buy || c.roi <= 0) continue;
+      if (c.invalid || !c.buy || c.roi <= 0) continue;
       if (!best || c.roi > best.roi) best = { city, roi: c.roi, net: c.net };
     }
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, bmRefPrice, quantity, totalTaxRate]);
+  }, [cityRows, rows, bmRefPrice, quantity, totalTaxRate]);
 
   const filteredItems = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
