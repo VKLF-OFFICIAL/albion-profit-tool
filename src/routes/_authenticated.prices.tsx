@@ -124,7 +124,7 @@ function freshness(iso?: string): { label: string; tone: string } {
 
 function PricesPage() {
   const search = Route.useSearch();
-  const favs = useFavorites();
+  
 
   const [baseId, setBaseId] = useState(search.base ?? "BAG");
   const [tier, setTier] = useState(search.tier ?? 4);
