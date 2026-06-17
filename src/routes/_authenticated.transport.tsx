@@ -154,28 +154,36 @@ function TransportPage() {
   const setupFee = sellMode === "sellorder" ? 0.025 : 0;
   const totalTaxRate = salesTax + setupFee;
 
-  const calcRow = (r: PriceRow) => {
+  const calcRow = (r: PriceRow, originIsBM = false) => {
     const buy = r.sell_price_min;
+    // Si el origen es el propio Mercado Negro, no hay setup fee porque sólo
+    // se rellena una orden de compra (instasell). En sellorder mantenemos
+    // únicamente el impuesto de venta (sin setup fee), ya que publicar y
+    // vender en el mismo mercado no tiene sentido económico con doble fee.
+    const taxRate = originIsBM ? salesTax : totalTaxRate;
     if (!buy || !bmRefPrice) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: false };
-    }
-    if (buy >= 999999) {
-      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0, invalid: true };
+      return { buy, totalCost: 0, gross: 0, taxes: 0, net: 0, roi: 0 };
     }
     const totalCost = buy * quantity;
     const gross = bmRefPrice * quantity;
-    const taxes = gross * totalTaxRate;
+    const taxes = gross * taxRate;
     const net = gross - taxes - totalCost;
     const roi = totalCost > 0 ? (net / totalCost) * 100 : 0;
-    return { buy, totalCost, gross, taxes, net, roi, invalid: false };
+    return { buy, totalCost, gross, taxes, net, roi };
   };
 
 
-  const TRANSPORT_CITIES = CITIES.filter((c) => c !== "Caerleon");
+  // Orígenes: las 5 ciudades reales (excluyendo Caerleon) + el propio
+  // Mercado Negro como "ciudad" extra, con su propia configuración fiscal
+  // (sin setup fee, sólo impuesto de venta).
+  const TRANSPORT_CITIES = [
+    ...CITIES.filter((c) => c !== "Caerleon"),
+    BLACK_MARKET,
+  ];
 
   const cityRows = TRANSPORT_CITIES.map((city) => {
     const r = rows.find((x) => x.city === city);
-    return { city, row: r };
+    return { city, row: r, isBM: city === BLACK_MARKET };
   });
 
   // Mejor oportunidad: máximo ROI > 0 (excluye datos nulos de la API)
