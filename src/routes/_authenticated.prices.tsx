@@ -87,6 +87,7 @@ export const Route = createFileRoute("/_authenticated/prices")({
   }),
   component: PricesPage,
 });
+const TIERS = [4, 5, 6, 7, 8];
 const ENCHANTS = [0, 1, 2, 3, 4];
 const CATEGORIES: ("all" | AlbionCategory)[] = [
   "all",
