@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PasswordStrength } from "@/components/password-strength";
+import { isPasswordStrong } from "@/lib/password";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -45,6 +47,9 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!isPasswordStrong(password)) {
+      return toast.error("La contraseña no cumple los requisitos de seguridad.");
+    }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -100,8 +105,9 @@ function AuthPage() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                   <Field id="su-email" label="Email" type="email" value={email} setValue={setEmail} />
-                  <Field id="su-pass" label="Contraseña (mín. 6 caracteres)" type="password" value={password} setValue={setPassword} />
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Field id="su-pass" label="Contraseña" type="password" value={password} setValue={setPassword} />
+                  <PasswordStrength value={password} />
+                  <Button type="submit" className="w-full" disabled={loading || !isPasswordStrong(password)}>
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear cuenta"}
                   </Button>
                 </form>
